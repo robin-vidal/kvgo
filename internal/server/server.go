@@ -3,6 +3,7 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 
 	"github.com/rvHoney/kvgo/internal/config"
@@ -10,7 +11,7 @@ import (
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	fmt.Println("New connection:", conn.RemoteAddr())
+	slog.Debug("new TCP connection", "remoteAddr", conn.RemoteAddr())
 }
 
 // Start launches a tcp server according to the configuration
@@ -22,11 +23,11 @@ func Start(cfg *config.Config) error {
 	}
 	defer ln.Close()
 
-	fmt.Println("Server is listening")
-
+	slog.Info("TCP server is listening", "addr", ln.Addr().String())
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
+			slog.Debug("connection accept failed", "error", err)
 			continue
 		}
 		go handleConnection(conn)

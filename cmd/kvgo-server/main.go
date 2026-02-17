@@ -5,28 +5,25 @@ It handles CLI flags, initializes the storage, and starts the TCP server.
 package main
 
 import (
-	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/rvHoney/kvgo/internal/config"
+	"github.com/rvHoney/kvgo/internal/logger"
 	"github.com/rvHoney/kvgo/internal/server"
 )
 
 func main() {
-	fmt.Println(os.Args[1:])
 	cfg, err := config.Parse(os.Args[1:])
 	if err != nil {
 		os.Exit(1)
 	}
 
-	if cfg.Debug {
-		fmt.Printf("Config loaded: %+v\n", cfg)
-	} else {
-		fmt.Printf("Config loaded\n")
-	}
+	logger.Init(cfg)
 
 	err = server.Start(cfg)
 	if err != nil {
+		slog.Error("server stopped unexpectedly", "error", err)
 		os.Exit(1)
 	}
 }
