@@ -9,9 +9,11 @@ import (
 	"os"
 
 	"github.com/rvHoney/kvgo/internal/config"
+	"github.com/rvHoney/kvgo/internal/server"
 )
 
 func main() {
+	fmt.Println(os.Args[1:])
 	cfg, err := config.Parse(os.Args[1:])
 	if err != nil {
 		os.Exit(1)
@@ -21,5 +23,10 @@ func main() {
 		fmt.Printf("Config loaded: %+v\n", cfg)
 	} else {
 		fmt.Printf("Config loaded\n")
+	}
+
+	err = server.Start(cfg)
+	if err != nil {
+		os.Exit(1)
 	}
 }
