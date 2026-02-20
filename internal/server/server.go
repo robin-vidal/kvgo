@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/rvHoney/kvgo/internal/config"
+	"github.com/rvHoney/kvgo/internal/database"
 )
 
 // parseCommand parses the user input into a command and its arguments.
@@ -26,7 +27,7 @@ func parseCommand(input string) (string, []string, error) {
 }
 
 // handleConnection manages a TCP connection, reading and executing commands in a loop.
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, db *database.Database) {
 	defer conn.Close()
 	slog.Debug("new TCP connection", "remoteAddr", conn.RemoteAddr())
 
@@ -53,7 +54,7 @@ func handleConnection(conn net.Conn) {
 }
 
 // Start launches a TCP server according to the configuration
-func Start(cfg *config.Config) error {
+func Start(cfg *config.Config, db *database.Database) error {
 	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
@@ -69,6 +70,6 @@ func Start(cfg *config.Config) error {
 			continue
 		}
 
-		go handleConnection(conn)
+		go handleConnection(conn, db)
 	}
 }

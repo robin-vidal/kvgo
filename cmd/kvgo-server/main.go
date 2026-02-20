@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/rvHoney/kvgo/internal/config"
+	"github.com/rvHoney/kvgo/internal/database"
 	"github.com/rvHoney/kvgo/internal/logger"
 	"github.com/rvHoney/kvgo/internal/server"
 )
@@ -21,7 +22,9 @@ func main() {
 
 	logger.Init(cfg)
 
-	err = server.Start(cfg)
+	db := database.New()
+
+	err = server.Start(cfg, db)
 	if err != nil {
 		slog.Error("server stopped unexpectedly", "error", err)
 		os.Exit(1)
