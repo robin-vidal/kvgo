@@ -1,0 +1,6 @@
+# build
+bin/
+
+# coverage
+coverage.html
+coverage.out
