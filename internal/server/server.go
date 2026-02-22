@@ -57,7 +57,11 @@ func parseCommand(input string) (string, []string, error) {
 
 // handleConnection manages a TCP connection, reading and executing commands in a loop.
 func handleConnection(conn net.Conn, db *database.Database) {
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			slog.Debug("failed to close connection", "error", err)
+		}
+	}()
 	slog.Debug("new TCP connection", "remoteAddr", conn.RemoteAddr())
 
 	reader := bufio.NewReader(conn)
@@ -80,7 +84,11 @@ func handleConnection(conn net.Conn, db *database.Database) {
 		response := executeCommand(db, cmd, args)
 		slog.Debug("executed", "cmd", cmd, "args", args, "response", response)
 
-		fmt.Fprintln(conn, response)
+		_, err = fmt.Fprintln(conn, response)
+		if err != nil {
+			slog.Debug("failed to send response", "error", err)
+			break
+		}
 	}
 }
 
@@ -91,7 +99,11 @@ func Start(cfg *config.Config, db *database.Database) error {
 	if err != nil {
 		return err
 	}
-	defer ln.Close()
+	defer func() {
+		if err := ln.Close(); err != nil {
+			slog.Debug("failed to close listener", "error", err)
+		}
+	}()
 
 	slog.Info("TCP server is listening", "addr", ln.Addr().String())
 	for {
