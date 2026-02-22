@@ -1,0 +1,27 @@
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/rvHoney/kvgo
+  revive:
+    severity: warning
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - gocritic
+    - gofmt
+    - goimports
+    - revive
+    - copyloopvar
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
