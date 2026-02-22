@@ -1,6 +1,10 @@
 package server
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/rvHoney/kvgo/internal/database"
+)
 
 func TestParseCommand(t *testing.T) {
 	tests := []struct {
@@ -52,6 +56,75 @@ func TestParseCommand(t *testing.T) {
 				if len(args) != tt.wantLen {
 					t.Errorf("got args len %v, want %v", len(args), tt.wantLen)
 				}
+			}
+		})
+	}
+}
+
+func TestExecuteCommand(t *testing.T) {
+	db := database.New()
+
+	tests := []struct {
+		name string
+		cmd  string
+		args []string
+		want string
+	}{
+		{
+			name: "SET successful",
+			cmd:  "SET",
+			args: []string{"key1", "value1"},
+			want: "OK\n",
+		},
+		{
+			name: "GET successful",
+			cmd:  "GET",
+			args: []string{"key1"},
+			want: "value1\n",
+		},
+		{
+			name: "GET non-existent",
+			cmd:  "GET",
+			args: []string{"key2"},
+			want: "(nil)\n",
+		},
+		{
+			name: "DEL successful",
+			cmd:  "DEL",
+			args: []string{"key1"},
+			want: "OK\n",
+		},
+		{
+			name: "SET wrong args",
+			cmd:  "SET",
+			args: []string{"key1"},
+			want: "ERR wrong number of arguments for 'SET'\n",
+		},
+		{
+			name: "GET wrong args",
+			cmd:  "GET",
+			args: []string{},
+			want: "ERR wrong number of arguments for 'GET'\n",
+		},
+		{
+			name: "DEL wrong args",
+			cmd:  "DEL",
+			args: []string{},
+			want: "ERR wrong number of arguments for 'DEL'\n",
+		},
+		{
+			name: "Unknown command",
+			cmd:  "UNKNOWN",
+			args: []string{},
+			want: "ERR unknown command 'UNKNOWN'\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := executeCommand(db, tt.cmd, tt.args)
+			if got != tt.want {
+				t.Errorf("executeCommand() = %q, want %q", got, tt.want)
 			}
 		})
 	}

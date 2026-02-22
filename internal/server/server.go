@@ -14,6 +14,35 @@ import (
 	"github.com/rvHoney/kvgo/internal/database"
 )
 
+// executeCommand dispatches the command based on its name and run it.
+func executeCommand(db *database.Database, cmd string, args []string) string {
+	switch cmd {
+	case "SET":
+		if len(args) != 2 {
+			return "ERR wrong number of arguments for 'SET'\n"
+		}
+		db.Set(args[0], args[1])
+		return "OK\n"
+	case "GET":
+		if len(args) != 1 {
+			return "ERR wrong number of arguments for 'GET'\n"
+		}
+		val, ok := db.Get(args[0])
+		if !ok {
+			return "(nil)\n"
+		}
+		return val + "\n"
+	case "DEL":
+		if len(args) != 1 {
+			return "ERR wrong number of arguments for 'DEL'\n"
+		}
+		db.Delete(args[0])
+		return "OK\n"
+	default:
+		return fmt.Sprintf("ERR unknown command '%s'\n", cmd)
+	}
+}
+
 // parseCommand parses the user input into a command and its arguments.
 func parseCommand(input string) (string, []string, error) {
 	input = strings.TrimSpace(input)
@@ -48,8 +77,10 @@ func handleConnection(conn net.Conn, db *database.Database) {
 			continue
 		}
 
-		slog.Debug("executing", "cmd", cmd, "args", args)
-		fmt.Fprintln(conn, "OK")
+		response := executeCommand(db, cmd, args)
+		slog.Debug("executed", "cmd", cmd, "args", args, "response", response)
+
+		fmt.Fprintln(conn, response)
 	}
 }
 
