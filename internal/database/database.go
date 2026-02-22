@@ -30,3 +30,10 @@ func (db *Database) Get(key string) (string, bool) {
 	val, ok := db.data[key]
 	return val, ok
 }
+
+// Delete remove the key in the map.
+func (db *Database) Delete(key string) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	delete(db.data, key)
+}

@@ -85,6 +85,46 @@ func TestSet(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    map[string]string
+		key     string
+		wantMap map[string]string
+	}{
+		{
+			name:    "Existing Key",
+			data:    map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
+			key:     "field2",
+			wantMap: map[string]string{"field1": "value1", "field3": "value3"},
+		},
+		{
+			name:    "Unknow Key",
+			data:    map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
+			key:     "field4",
+			wantMap: map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := New()
+			db.data = tt.data
+
+			db.Delete(tt.key)
+
+			val, ok := tt.data[tt.key]
+			wantVal, wantOk := tt.wantMap[tt.key]
+			if val != wantVal {
+				t.Errorf("Get() val = %v, wantVal %v", val, tt.wantMap[tt.key])
+			}
+			if ok != wantOk {
+				t.Errorf("Get() ok = %v, want %v", ok, wantOk)
+			}
+		})
+	}
+}
+
 func TestDatabaseConcurrency(t *testing.T) {
 	db := New()
 	const workers int = 50
