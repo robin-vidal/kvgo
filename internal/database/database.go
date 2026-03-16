@@ -5,7 +5,7 @@ import (
 	"hash/fnv"
 	"sync"
 
-	"github.com/rvHoney/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/config"
 )
 
 type databaseShard struct {

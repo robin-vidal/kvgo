@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/rvHoney/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/config"
 )
 
 func generateSampleConfig(shardAmount int) *config.Config {

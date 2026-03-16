@@ -10,8 +10,8 @@ import (
 	"net"
 	"strings"
 
-	"github.com/rvHoney/kvgo/internal/config"
-	"github.com/rvHoney/kvgo/internal/database"
+	"github.com/robin-vidal/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/database"
 )
 
 // executeCommand dispatches the command based on its name and run it.
