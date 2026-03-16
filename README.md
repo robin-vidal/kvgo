@@ -12,6 +12,7 @@
 * **TCP Server:** Custom connection handling for concurrent clients.
 * **Thread-safe Storage:** Wrapped map with `sync.RWMutex` for safe concurrent operations.
 * **Basic Commands:** Support for standard operations (`GET`, `SET`, `DEL`).
+* **Sharding:** Partition the storage to reduce lock contention on larger datasets.
 
 ## Engineering Focus
 The project is built with a focus on straightforward, idiomatic Go patterns:
@@ -43,9 +44,9 @@ make coverage
 ```
 
 ## Roadmap
-* **Sharding:** Partition the storage to reduce lock contention on larger datasets.
 * **RESP Protocol:** Support the REdis Serialization Protocol (RESP) to be compatible with standard Redis clients.
 * **Worker Pools:** Transition from 1-goroutine-per-connection to a worker pool to better manage resources under high connection loads.
+* **RAFT:** Ensure data replication and integrity thanks to an elected leader.
 
 ---
 *A project focused on simplicity and Go concurrency.*
