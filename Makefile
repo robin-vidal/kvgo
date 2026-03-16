@@ -12,27 +12,27 @@ NC=\033[0m
 all: build
 
 build:
-	@echo "$(BLUE)Building $(BINARY_NAME)...$(NC)"
+	@echo -e "$(BLUE)Building $(BINARY_NAME)...$(NC)"
 	@mkdir -p $(BUILD_DIR)
 	@go build -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
 
 run: build
-	@echo "$(BLUE)Running $(BINARY_NAME)...$(NC)"
+	@echo -e "$(BLUE)Running $(BINARY_NAME)...$(NC)"
 	@./$(BUILD_DIR)/$(BINARY_NAME) $(ARGS)
 
 test:
-	@echo "$(BLUE)Running tests with -race...$(NC)"
+	@echo -e "$(BLUE)Running tests with -race...$(NC)"
 	@go test -v -race ./...
 
 coverage:
-	@echo "$(BLUE)Running tests...$(NC)"
+	@echo -e "$(BLUE)Running tests...$(NC)"
 	@go test -race -coverprofile=$(COVERAGE_FILE) ./...
-	@echo "$(BLUE)Generating HTML report...$(NC)"
+	@echo -e "$(BLUE)Generating HTML report...$(NC)"
 	@go tool cover -html=$(COVERAGE_FILE) -o coverage.html
-	@echo "$(BLUE)Global Statistics:$(NC)"
+	@echo -e "$(BLUE)Global Statistics:$(NC)"
 	@go tool cover -func=$(COVERAGE_FILE)
 
 clean:
-	@echo "$(BLUE)Cleaning...$(NC)"
+	@echo -e "$(BLUE)Cleaning...$(NC)"
 	@rm -rf $(BUILD_DIR)
 	@rm -f $(COVERAGE_FILE) coverage.html

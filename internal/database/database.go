@@ -1,39 +1,66 @@
 // Package database handles database initialization and data manipulation
 package database
 
-import "sync"
+import (
+	"hash/fnv"
+	"sync"
 
-// Database stores application data and avoids race conditions.
-type Database struct {
+	"github.com/rvHoney/kvgo/internal/config"
+)
+
+type databaseShard struct {
 	mu   sync.RWMutex
 	data map[string]string
 }
 
+// Database stores application data.
+type Database struct {
+	shards []databaseShard
+}
+
 // New creates and returns a new instance of the database.
-func New() *Database {
-	return &Database{
-		data: make(map[string]string),
+func New(cfg *config.Config) *Database {
+	db := &Database{
+		shards: make([]databaseShard, cfg.ShardAmount),
 	}
+
+	for i := 0; i < cfg.ShardAmount; i++ {
+		db.shards[i].data = make(map[string]string)
+	}
+
+	return db
 }
 
 // Set defines the value for a specific key in the map.
 func (db *Database) Set(key, value string) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.data[key] = value
+	shard := &db.shards[getShard(key, len(db.shards))]
+
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
+	shard.data[key] = value
 }
 
 // Get retrieves the value in the map for a specific key.
 func (db *Database) Get(key string) (string, bool) {
-	db.mu.RLock()
-	defer db.mu.RUnlock()
-	val, ok := db.data[key]
+	shard := &db.shards[getShard(key, len(db.shards))]
+
+	shard.mu.RLock()
+	defer shard.mu.RUnlock()
+	val, ok := shard.data[key]
 	return val, ok
 }
 
 // Delete remove the key in the map.
 func (db *Database) Delete(key string) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	delete(db.data, key)
+	shard := &db.shards[getShard(key, len(db.shards))]
+
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
+	delete(shard.data, key)
+}
+
+func getShard(key string, shardAmount int) int {
+	hasher := fnv.New64a()
+	hasher.Write([]byte(key))
+	return int(hasher.Sum64() % uint64(shardAmount))
 }
