@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/rvHoney/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/config"
 )
 
 func Init(cfg *config.Config) {

@@ -3,7 +3,7 @@
 
 [![Go Version](https://img.shields.io/badge/go-1.25.6-blue.svg)](https://golang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/rvHoney/kvgo/actions/workflows/ci.yml/badge.svg)](https://github.com/rvHoney/kvgo/actions/workflows/ci.yml)
+[![CI](https://github.com/robin-vidal/kvgo/actions/workflows/ci.yml/badge.svg)](https://github.com/robin-vidal/kvgo/actions/workflows/ci.yml)
 
 ## Overview
 **kvgo** is a lightweight, in-memory key-value store implemented in Go. Built as an educational Redis clone, it focuses on simplicity, clear concurrent patterns, and standard library usage.
