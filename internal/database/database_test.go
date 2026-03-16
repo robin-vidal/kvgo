@@ -4,7 +4,18 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+
+	"github.com/rvHoney/kvgo/internal/config"
 )
+
+func generateSampleConfig(shardAmount int) *config.Config {
+	return &config.Config{
+		Host:        "localhost",
+		Port:        6379,
+		Debug:       false,
+		ShardAmount: shardAmount,
+	}
+}
 
 func TestGet(t *testing.T) {
 	tests := []struct {
@@ -32,8 +43,12 @@ func TestGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := New()
-			db.data = tt.data
+			cfg := generateSampleConfig(2)
+			db := New(cfg)
+
+			for key, val := range tt.data {
+				db.Set(key, val)
+			}
 
 			val, ok := db.Get(tt.key)
 			if val != tt.wantVal {
@@ -69,16 +84,20 @@ func TestSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := New()
-			db.data = tt.data
+			cfg := generateSampleConfig(2)
+			db := New(cfg)
+
+			for key, val := range tt.data {
+				db.Set(key, val)
+			}
 
 			db.Set(tt.key, tt.wantVal)
 
-			val, ok := tt.data[tt.key]
+			val, ok := db.Get(tt.key)
 			if val != tt.wantVal {
 				t.Errorf("Get() val = %v, wantVal %v", val, tt.wantVal)
 			}
-			if ok != true {
+			if !ok {
 				t.Errorf("Get() ok = %v, want %v", ok, true)
 			}
 		})
@@ -87,46 +106,45 @@ func TestSet(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	tests := []struct {
-		name    string
-		data    map[string]string
-		key     string
-		wantMap map[string]string
+		name string
+		data map[string]string
+		key  string
 	}{
 		{
-			name:    "Existing Key",
-			data:    map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
-			key:     "field2",
-			wantMap: map[string]string{"field1": "value1", "field3": "value3"},
+			name: "Existing Key",
+			data: map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
+			key:  "field2",
 		},
 		{
-			name:    "Unknow Key",
-			data:    map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
-			key:     "field4",
-			wantMap: map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
+			name: "Unknow Key",
+			data: map[string]string{"field1": "value1", "field2": "value2", "field3": "value3"},
+			key:  "field4",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := New()
-			db.data = tt.data
+			cfg := generateSampleConfig(2)
+			db := New(cfg)
+
+			for key, val := range tt.data {
+				db.Set(key, val)
+			}
 
 			db.Delete(tt.key)
 
-			val, ok := tt.data[tt.key]
-			wantVal, wantOk := tt.wantMap[tt.key]
-			if val != wantVal {
-				t.Errorf("Get() val = %v, wantVal %v", val, tt.wantMap[tt.key])
-			}
-			if ok != wantOk {
-				t.Errorf("Get() ok = %v, want %v", ok, wantOk)
+			val, ok := db.Get(tt.key)
+			if ok {
+				t.Errorf("Get() val = %v, want <nil>", val)
 			}
 		})
 	}
 }
 
 func TestDatabaseConcurrency(t *testing.T) {
-	db := New()
+	cfg := generateSampleConfig(2)
+	db := New(cfg)
+
 	const workers int = 50
 	const iterations int = 1000
 
@@ -156,4 +174,41 @@ func TestDatabaseConcurrency(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestGetShard(t *testing.T) {
+	tests := []struct {
+		name        string
+		key         string
+		shardAmount int
+		wantVal     int
+	}{
+		{
+			name:        "Basic key 1",
+			key:         "salut",
+			shardAmount: 2,
+			wantVal:     0,
+		},
+		{
+			name:        "Basic key 2",
+			key:         "test",
+			shardAmount: 2,
+			wantVal:     1,
+		},
+		{
+			name:        "Huge Shard Amount",
+			key:         "BIIIG",
+			shardAmount: 200,
+			wantVal:     95,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val := getShard(tt.key, tt.shardAmount)
+			if val != tt.wantVal {
+				t.Errorf("getShard() val = %v, want %v", val, tt.wantVal)
+			}
+		})
+	}
 }

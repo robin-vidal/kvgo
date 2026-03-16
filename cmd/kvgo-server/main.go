@@ -22,7 +22,7 @@ func main() {
 
 	logger.Init(cfg)
 
-	db := database.New()
+	db := database.New(cfg)
 
 	err = server.Start(cfg, db)
 	if err != nil {

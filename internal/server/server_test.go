@@ -3,8 +3,18 @@ package server
 import (
 	"testing"
 
+	"github.com/rvHoney/kvgo/internal/config"
 	"github.com/rvHoney/kvgo/internal/database"
 )
+
+func generateSampleConfig() *config.Config {
+	return &config.Config{
+		Host:        "localhost",
+		Port:        6379,
+		Debug:       false,
+		ShardAmount: 2,
+	}
+}
 
 func TestParseCommand(t *testing.T) {
 	tests := []struct {
@@ -62,7 +72,8 @@ func TestParseCommand(t *testing.T) {
 }
 
 func TestExecuteCommand(t *testing.T) {
-	db := database.New()
+	cfg := generateSampleConfig()
+	db := database.New(cfg)
 
 	tests := []struct {
 		name string
