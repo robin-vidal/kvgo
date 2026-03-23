@@ -18,7 +18,7 @@ func TestParse(t *testing.T) {
 		{
 			name:            "Default values",
 			args:            []string{},
-			wantHost:        "localhost",
+			wantHost:        "0.0.0.0",
 			wantPort:        6379,
 			wantShardAmount: runtime.NumCPU(),
 			wantDebug:       false,
@@ -27,7 +27,7 @@ func TestParse(t *testing.T) {
 		{
 			name:            "Zero Shard",
 			args:            []string{"--shardAmount=0"},
-			wantHost:        "localhost",
+			wantHost:        "0.0.0.0",
 			wantPort:        6379,
 			wantShardAmount: 0,
 			wantDebug:       false,
