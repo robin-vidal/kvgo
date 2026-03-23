@@ -98,7 +98,7 @@ func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
 
 		slog.Debug("executed", "cmd", cmd, "args", args, "response", response)
 
-		_, err = fmt.Fprintln(conn, response)
+		_, err = fmt.Fprint(conn, response)
 		if err != nil {
 			slog.Debug("failed to send response", "error", err)
 			break
