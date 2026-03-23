@@ -3,7 +3,7 @@ project_name: kvgo
 
 builds:
   - id: kvgo-server
-    main: ./cmd/kvgo-server
+    main: ./cmd/kvgo-server/
     binary: kvgo-server
     env:
       - CGO_ENABLED=0
@@ -37,3 +37,11 @@ changelog:
       - '^docs:'
       - '^chore:'
       - '^test:'
+
+dockers:
+  - image_templates:
+      - "ghcr.io/robin-vidal/kvgo:{{ .Tag }}"
+      - "ghcr.io/robin-vidal/kvgo:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
