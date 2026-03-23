@@ -1,0 +1,24 @@
+services:
+  kvgo:
+    build: .
+    ports:
+      - "6379:6379"
+      - "2112:2112"
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - kvgo
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus

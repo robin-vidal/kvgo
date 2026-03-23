@@ -32,7 +32,7 @@ func Init() (shutdown func(context.Context) error, err error) {
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(":9090", nil)
+		http.ListenAndServe(":2112", nil)
 	}()
 
 	return provider.Shutdown, nil
