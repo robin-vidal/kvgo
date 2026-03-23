@@ -9,36 +9,45 @@ import (
 	"log/slog"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 )
 
 // executeCommand dispatches the command based on its name and run it.
-func executeCommand(db *database.Database, cmd string, args []string) string {
+func executeCommand(db *database.Database, m *metrics, cmd string, args []string) string {
 	switch cmd {
 	case "SET":
 		if len(args) != 2 {
+			m.recordCommand("SET", "err")
 			return "ERR wrong number of arguments for 'SET'\n"
 		}
 		db.Set(args[0], args[1])
+		m.recordCommand("SET", "ok")
 		return "OK\n"
 	case "GET":
 		if len(args) != 1 {
+			m.recordCommand("GET", "err")
 			return "ERR wrong number of arguments for 'GET'\n"
 		}
 		val, ok := db.Get(args[0])
 		if !ok {
+			m.recordCommand("GET", "ok")
 			return "(nil)\n"
 		}
+		m.recordCommand("GET", "ok")
 		return val + "\n"
 	case "DEL":
 		if len(args) != 1 {
+			m.recordCommand("DEL", "err")
 			return "ERR wrong number of arguments for 'DEL'\n"
 		}
 		db.Delete(args[0])
+		m.recordCommand("DEL", "ok")
 		return "OK\n"
 	default:
+		m.recordCommand(cmd, "err")
 		return fmt.Sprintf("ERR unknown command '%s'\n", cmd)
 	}
 }
@@ -56,13 +65,15 @@ func parseCommand(input string) (string, []string, error) {
 }
 
 // handleConnection manages a TCP connection, reading and executing commands in a loop.
-func handleConnection(conn net.Conn, db *database.Database) {
+func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			slog.Debug("failed to close connection", "error", err)
 		}
+		m.recordConnection(-1)
 	}()
 	slog.Debug("new TCP connection", "remoteAddr", conn.RemoteAddr())
+	m.recordConnection(1)
 
 	reader := bufio.NewReader(conn)
 
@@ -81,7 +92,10 @@ func handleConnection(conn net.Conn, db *database.Database) {
 			continue
 		}
 
-		response := executeCommand(db, cmd, args)
+		start := time.Now()
+		response := executeCommand(db, m, cmd, args)
+		m.recordDuration(cmd, float64(time.Since(start).Microseconds()))
+
 		slog.Debug("executed", "cmd", cmd, "args", args, "response", response)
 
 		_, err = fmt.Fprintln(conn, response)
@@ -106,6 +120,12 @@ func Start(cfg *config.Config, db *database.Database) error {
 	}()
 
 	slog.Info("TCP server is listening", "addr", ln.Addr().String())
+
+	m, err := newMetrics()
+	if err != nil {
+		return err
+	}
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -113,6 +133,6 @@ func Start(cfg *config.Config, db *database.Database) error {
 			continue
 		}
 
-		go handleConnection(conn, db)
+		go handleConnection(conn, db, m)
 	}
 }
