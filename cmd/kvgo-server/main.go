@@ -5,6 +5,7 @@ It handles CLI flags, initializes the storage, and starts the TCP server.
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/logger"
 	"github.com/robin-vidal/kvgo/internal/server"
+	"github.com/robin-vidal/kvgo/internal/telemetry"
 )
 
 func main() {
@@ -21,6 +23,13 @@ func main() {
 	}
 
 	logger.Init(cfg)
+
+	shutdown, err := telemetry.Init()
+	if err != nil {
+		slog.Error("failed to initialize telemetry", "error", err)
+		os.Exit(1)
+	}
+	defer shutdown(context.Background())
 
 	db := database.New(cfg)
 
