@@ -131,9 +131,14 @@ func TestExecuteCommand(t *testing.T) {
 		},
 	}
 
+	m, err := newMetrics()
+	if err != nil {
+		t.Fatalf("newMetrics() error = %v", err)
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := executeCommand(db, tt.cmd, tt.args)
+			got := executeCommand(db, m, tt.cmd, tt.args)
 			if got != tt.want {
 				t.Errorf("executeCommand() = %q, want %q", got, tt.want)
 			}
