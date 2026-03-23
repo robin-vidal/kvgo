@@ -70,8 +70,10 @@ func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
 		if err := conn.Close(); err != nil {
 			slog.Debug("failed to close connection", "error", err)
 		}
+		m.recordConnection(-1)
 	}()
 	slog.Debug("new TCP connection", "remoteAddr", conn.RemoteAddr())
+	m.recordConnection(1)
 
 	reader := bufio.NewReader(conn)
 

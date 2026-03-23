@@ -69,3 +69,8 @@ func (m *metrics) recordDuration(cmd string, duration float64) {
 		),
 	)
 }
+
+// recordConnection increments or decrements the active connections counter.
+func (m *metrics) recordConnection(delta int64) {
+	m.connectionsActive.Add(context.Background(), delta)
+}
