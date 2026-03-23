@@ -31,7 +31,7 @@ func Parse(args []string) (*Config, error) {
 
 	fs := flag.NewFlagSet("kvgo", flag.ContinueOnError)
 
-	fs.StringVar(&cfg.Host, "host", "localhost", "The host to bind to")
+	fs.StringVar(&cfg.Host, "host", "0.0.0.0", "The host to bind to")
 	fs.IntVar(&cfg.Port, "port", 6379, "The port to listen on")
 	fs.BoolVar(&cfg.Debug, "debug", false, "Enable debug mode")
 	fs.IntVar(&cfg.ShardAmount, "shardAmount", runtime.NumCPU(), "The number of shards")
