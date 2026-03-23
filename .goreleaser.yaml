@@ -42,6 +42,6 @@ dockers:
   - image_templates:
       - "ghcr.io/robin-vidal/kvgo:{{ .Tag }}"
       - "ghcr.io/robin-vidal/kvgo:latest"
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.goreleaser
     build_flag_templates:
       - "--platform=linux/amd64"
