@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
@@ -89,7 +90,10 @@ func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
 			continue
 		}
 
+		start := time.Now()
 		response := executeCommand(db, m, cmd, args)
+		m.recordDuration(cmd, float64(time.Since(start).Microseconds()))
+
 		slog.Debug("executed", "cmd", cmd, "args", args, "response", response)
 
 		_, err = fmt.Fprintln(conn, response)

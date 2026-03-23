@@ -27,9 +27,9 @@ func newMetrics() (*metrics, error) {
 	}
 
 	commandsDuration, err := meter.Float64Histogram(
-		"db.commands.duration_ms",
-		metric.WithDescription("Duration of command execution in milliseconds"),
-		metric.WithUnit("ms"),
+		"db.commands.duration_us",
+		metric.WithDescription("Duration of command execution in microseconds"),
+		metric.WithUnit("us"),
 	)
 	if err != nil {
 		return nil, err
@@ -57,6 +57,15 @@ func (m *metrics) recordCommand(cmd, status string) {
 		metric.WithAttributes(
 			attribute.String("command", cmd),
 			attribute.String("status", status),
+		),
+	)
+}
+
+// recordDuration records the execution duration of a command in milliseconds.
+func (m *metrics) recordDuration(cmd string, duration float64) {
+	m.commandsDuration.Record(context.Background(), duration,
+		metric.WithAttributes(
+			attribute.String("command", cmd),
 		),
 	)
 }
