@@ -121,7 +121,7 @@ func Start(cfg *config.Config, db *database.Database) error {
 
 	slog.Info("TCP server is listening", "addr", ln.Addr().String())
 
-	m, err := newMetrics()
+	m, err := newMetrics(db)
 	if err != nil {
 		return err
 	}

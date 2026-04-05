@@ -212,3 +212,50 @@ func TestGetShard(t *testing.T) {
 		})
 	}
 }
+
+func TestGetKeyAmountPerShard(t *testing.T) {
+	tests := []struct {
+		name        string
+		shardAmount int
+		data        map[string]string
+		wantTotal   int
+	}{
+		{
+			name:        "Empty Database",
+			shardAmount: 4,
+			data:        make(map[string]string),
+			wantTotal:   0,
+		},
+		{
+			name:        "Simple Database",
+			shardAmount: 4,
+			data:        map[string]string{"a": "1", "b": "2", "c": "3"},
+			wantTotal:   3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := generateSampleConfig(tt.shardAmount)
+			db := New(cfg)
+
+			for key, value := range tt.data {
+				db.Set(key, value)
+			}
+
+			amountPerShard := db.GetKeyAmountPerShard()
+			totalAmount := 0
+			for _, currentAmount := range amountPerShard {
+				totalAmount += currentAmount
+			}
+
+			if totalAmount != tt.wantTotal {
+				t.Errorf("GetKeyAmountPerShard() val = %v, want %v", totalAmount, tt.wantTotal)
+			}
+
+			if len(amountPerShard) != tt.shardAmount {
+				t.Errorf("GetKeyAmountPerShard() len() = %v, want %v", len(amountPerShard), tt.shardAmount)
+			}
+		})
+	}
+}
