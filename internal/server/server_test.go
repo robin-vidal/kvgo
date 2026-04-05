@@ -131,7 +131,7 @@ func TestExecuteCommand(t *testing.T) {
 		},
 	}
 
-	m, err := newMetrics()
+	m, err := newMetrics(db)
 	if err != nil {
 		t.Fatalf("newMetrics() error = %v", err)
 	}

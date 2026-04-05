@@ -64,3 +64,15 @@ func getShard(key string, shardAmount int) int {
 	hasher.Write([]byte(key))
 	return int(hasher.Sum64() % uint64(shardAmount))
 }
+
+func (db *Database) GetKeyAmountPerShard() []int {
+	amountPerShard := make([]int, 0, len(db.shards))
+
+	for _, shard := range db.shards {
+		shard.mu.RLock()
+		amountPerShard = append(amountPerShard, len(shard.data))
+		shard.mu.RUnlock()
+	}
+
+	return amountPerShard
+}
