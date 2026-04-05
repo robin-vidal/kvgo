@@ -33,7 +33,7 @@ func executeCommand(db *database.Database, m *metrics, cmd string, args []string
 		}
 		val, ok := db.Get(args[0])
 		if !ok {
-			m.recordCommand("GET", "ok")
+			m.recordCommand("GET", "miss")
 			return "(nil)\n"
 		}
 		m.recordCommand("GET", "ok")
