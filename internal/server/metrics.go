@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"runtime"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -15,6 +16,7 @@ type metrics struct {
 	commandsDuration  metric.Float64Histogram
 	connectionsActive metric.Int64UpDownCounter
 	storeKeys         metric.Int64ObservableGauge
+	goroutines        metric.Int64ObservableGauge
 }
 
 func newMetrics(db *database.Database) (*metrics, error) {
@@ -62,11 +64,25 @@ func newMetrics(db *database.Database) (*metrics, error) {
 		return nil, err
 	}
 
+	goroutines, err := meter.Int64ObservableGauge(
+		"process.goroutines",
+		metric.WithDescription("Number of goroutines"),
+		metric.WithUnit("{goroutine}"),
+		metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+			o.Observe(int64(runtime.NumGoroutine()))
+			return nil
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &metrics{
 		commandsTotal:     commandsTotal,
 		commandsDuration:  commandsDuration,
 		connectionsActive: connectionsActive,
 		storeKeys:         storeKeys,
+		goroutines:        goroutines,
 	}, nil
 }
 
