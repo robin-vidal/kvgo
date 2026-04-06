@@ -17,6 +17,7 @@ type metrics struct {
 	connectionsActive metric.Int64UpDownCounter
 	storeKeys         metric.Int64ObservableGauge
 	goroutines        metric.Int64ObservableGauge
+	heapAlloc         metric.Int64ObservableGauge
 }
 
 func newMetrics(db *database.Database) (*metrics, error) {
@@ -77,12 +78,28 @@ func newMetrics(db *database.Database) (*metrics, error) {
 		return nil, err
 	}
 
+	heapAlloc, err := meter.Int64ObservableGauge(
+		"process.mem.heap_alloc",
+		metric.WithDescription("Amount of memory allocated on the heap"),
+		metric.WithUnit("By"),
+		metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			o.Observe(int64(memStats.HeapAlloc))
+			return nil
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &metrics{
 		commandsTotal:     commandsTotal,
 		commandsDuration:  commandsDuration,
 		connectionsActive: connectionsActive,
 		storeKeys:         storeKeys,
 		goroutines:        goroutines,
+		heapAlloc:         heapAlloc,
 	}, nil
 }
 
