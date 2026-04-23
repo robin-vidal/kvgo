@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 )
@@ -258,4 +259,53 @@ func TestGetKeyAmountPerShard(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestGetKeyAmountPerShard_RaceWithSetDel guards issue #28: prior to the
+// pointer-iter fix, GetKeyAmountPerShard ranged over db.shards by value,
+// copying each shard (including its sync.RWMutex) so the RLock was taken
+// on the per-iteration copy and the real shard stayed unlocked. That
+// reliably fired -race against concurrent Set/Del.
+func TestGetKeyAmountPerShard_RaceWithSetDel(t *testing.T) {
+	db := New(generateSampleConfig(8))
+
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		i := 0
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			k := fmt.Sprintf("k%d", i%128)
+			db.Set(k, "v")
+			db.Delete(k)
+			i++
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for j := 0; j < 2000; j++ {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			_ = db.GetKeyAmountPerShard()
+		}
+	}()
+
+	// Let the workload run briefly then signal stop. The race detector
+	// fires at goroutine-exit time if any interleaving occurred, so the
+	// duration just needs to be long enough to produce overlap.
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	wg.Wait()
 }

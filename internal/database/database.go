@@ -68,7 +68,14 @@ func getShard(key string, shardAmount int) int {
 func (db *Database) GetKeyAmountPerShard() []int {
 	amountPerShard := make([]int, 0, len(db.shards))
 
-	for _, shard := range db.shards {
+	// Iterate by index so shard is a pointer to the real slice element.
+	// The previous `for _, shard := range db.shards` copied the
+	// databaseShard value (including its sync.RWMutex), so the RLock was
+	// taken on a per-iteration copy and left the real shard unlocked;
+	// concurrent Set/Del calls hit by -race and could see a torn
+	// len(shard.data).
+	for i := range db.shards {
+		shard := &db.shards[i]
 		shard.mu.RLock()
 		amountPerShard = append(amountPerShard, len(shard.data))
 		shard.mu.RUnlock()
