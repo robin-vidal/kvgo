@@ -1,0 +1,54 @@
+{
+  "name": "kvgo",
+  "image": "mcr.microsoft.com/devcontainers/go:1.25",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    }
+  },
+
+  "runArgs": ["--privileged"],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "ms-vscode.makefile-tools",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.testFlags": ["-v", "-race"]
+      }
+    }
+  },
+
+  "postCreateCommand": "go mod download",
+  "postStartCommand": "sudo service docker start",
+
+  "portsAttributes": {
+    "6379": {
+      "label": "kvgo",
+      "onAutoForward": "silent"
+    },
+    "2112": {
+      "label": "kvgo metrics",
+      "onAutoForward": "silent"
+    },
+    "9090": {
+      "label": "Prometheus",
+      "onAutoForward": "silent"
+    },
+    "3000": {
+      "label": "Grafana",
+      "onAutoForward": "silent"
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "silent"
+  }
+}
