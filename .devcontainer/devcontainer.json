@@ -27,7 +27,7 @@
     }
   },
 
-  "postCreateCommand": "go mod download",
+  "postCreateCommand": "go mod download && sudo apt-get update && sudo apt-get install -y redis-tools",
   "postStartCommand": "sudo service docker start",
 
   "portsAttributes": {
