@@ -13,7 +13,7 @@ func TestEncodeSimpleString(t *testing.T) {
 	}{
 		{"OK", "OK", []byte("+OK\r\n")},
 		{"PONG", "PONG", []byte("+PONG\r\n")},
-		{"empty", "", []byte("+\r\n")},
+		{"Empty", "", []byte("+\r\n")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -30,8 +30,8 @@ func TestEncodeError(t *testing.T) {
 		input string
 		want  []byte
 	}{
-		{"simple error", "unknown command", []byte("-ERR unknown command\r\n")},
-		{"empty", "", []byte("-ERR \r\n")},
+		{"Simple error", "unknown command", []byte("-ERR unknown command\r\n")},
+		{"Empty", "", []byte("-ERR \r\n")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -48,9 +48,9 @@ func TestEncodeInteger(t *testing.T) {
 		input int
 		want  []byte
 	}{
-		{"positive", 42, []byte(":42\r\n")},
-		{"zero", 0, []byte(":0\r\n")},
-		{"negative", -1, []byte(":-1\r\n")},
+		{"Positive", 42, []byte(":42\r\n")},
+		{"Zero", 0, []byte(":0\r\n")},
+		{"Negative", -1, []byte(":-1\r\n")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -67,9 +67,9 @@ func TestEncodeBulkString(t *testing.T) {
 		input string
 		want  []byte
 	}{
-		{"normal", "foo", []byte("$3\r\nfoo\r\n")},
-		{"empty", "", []byte("$0\r\n\r\n")},
-		{"with spaces", "foo bar", []byte("$7\r\nfoo bar\r\n")},
+		{"Normal", "foo", []byte("$3\r\nfoo\r\n")},
+		{"Empty", "", []byte("$0\r\n\r\n")},
+		{"With spaces", "foo bar", []byte("$7\r\nfoo bar\r\n")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -94,12 +94,12 @@ func TestEncodeArray(t *testing.T) {
 		want  []byte
 	}{
 		{
-			"two bulk strings",
+			"Two bulk strings",
 			[][]byte{EncodeBulkString("foo"), EncodeBulkString("bar")},
 			[]byte("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"),
 		},
 		{
-			"empty array",
+			"Empty array",
 			[][]byte{},
 			[]byte("*0\r\n"),
 		},
