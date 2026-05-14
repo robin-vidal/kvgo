@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/robin-vidal/kvgo/actions/workflows/ci.yml/badge.svg)](https://github.com/robin-vidal/kvgo/actions/workflows/ci.yml)
 
-Sharded in-memory key-value store in Go. Custom TCP server, per-shard `RWMutex` locking, Prometheus/Grafana observability.
+Sharded in-memory key-value store in Go. Custom TCP server, per-shard `RWMutex` locking, RESP2 protocol, Prometheus/Grafana observability.
 
 ## Architecture
 
@@ -42,12 +42,16 @@ make run             # local binary only
 make test            # go test -v -race ./...
 ```
 
+```bash
+redis-cli -p 6379 SET foo bar
+redis-cli -p 6379 GET foo
+```
+
 - kvgo: `localhost:6379`
 - Prometheus: `localhost:9090`
 - Grafana: `localhost:3000` (dashboard auto-provisioned)
 
 ## Roadmap
 
-- **RESP protocol:** implement the Redis Serialization Protocol for compatibility with standard Redis clients.
 - **Worker pool:** bounded goroutine pool to cap resource usage under high connection counts.
 - **Raft consensus:** multi-node replication with leader election for fault tolerance.

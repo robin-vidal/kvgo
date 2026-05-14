@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
+	"github.com/robin-vidal/kvgo/internal/resp"
 )
 
 func generateSampleConfig() *config.Config {
@@ -16,118 +18,55 @@ func generateSampleConfig() *config.Config {
 	}
 }
 
-func TestParseCommand(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   string
-		wantCmd string
-		wantLen int
-		wantErr bool
-	}{
-		{
-			name:    "Simple SET",
-			input:   "SET key val\n",
-			wantCmd: "SET",
-			wantLen: 2,
-			wantErr: false,
-		},
-		{
-			name:    "Lowercase to Uppercase",
-			input:   "get mykey\r\n",
-			wantCmd: "GET",
-			wantLen: 1,
-			wantErr: false,
-		},
-		{
-			name:    "Extra spaces",
-			input:   "  DEL    key1   ",
-			wantCmd: "DEL",
-			wantLen: 1,
-			wantErr: false,
-		},
-		{
-			name:    "Empty",
-			input:   "\n",
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmd, args, err := parseCommand(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseCommand() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				if cmd != tt.wantCmd {
-					t.Errorf("got cmd %v, want %v", cmd, tt.wantCmd)
-				}
-				if len(args) != tt.wantLen {
-					t.Errorf("got args len %v, want %v", len(args), tt.wantLen)
-				}
-			}
-		})
-	}
-}
-
 func TestExecuteCommand(t *testing.T) {
 	cfg := generateSampleConfig()
 	db := database.New(cfg)
 
 	tests := []struct {
 		name string
-		cmd  string
+		cmd  resp.Command
 		args []string
-		want string
+		want []byte
 	}{
 		{
 			name: "SET successful",
-			cmd:  "SET",
-			args: []string{"key1", "value1"},
-			want: "OK\n",
+			cmd:  resp.Command{Name: "SET", Args: []string{"key1", "value1"}},
+			want: []byte("+OK\r\n"),
 		},
 		{
 			name: "GET successful",
-			cmd:  "GET",
-			args: []string{"key1"},
-			want: "value1\n",
+			cmd:  resp.Command{Name: "GET", Args: []string{"key1"}},
+			want: []byte("$6\r\nvalue1\r\n"),
 		},
 		{
 			name: "GET non-existent",
-			cmd:  "GET",
-			args: []string{"key2"},
-			want: "(nil)\n",
+			cmd:  resp.Command{Name: "GET", Args: []string{"key2"}},
+			want: []byte("$-1\r\n"),
 		},
 		{
 			name: "DEL successful",
-			cmd:  "DEL",
-			args: []string{"key1"},
-			want: "OK\n",
+			cmd:  resp.Command{Name: "DEL", Args: []string{"key1"}},
+			want: []byte(":1\r\n"),
 		},
 		{
 			name: "SET wrong args",
-			cmd:  "SET",
-			args: []string{"key1"},
-			want: "ERR wrong number of arguments for 'SET'\n",
+			cmd:  resp.Command{Name: "SET", Args: []string{"key1"}},
+			want: []byte("-ERR wrong number of arguments for 'SET'\r\n"),
 		},
 		{
 			name: "GET wrong args",
-			cmd:  "GET",
-			args: []string{},
-			want: "ERR wrong number of arguments for 'GET'\n",
+			cmd:  resp.Command{Name: "GET", Args: []string{}},
+			want: []byte("-ERR wrong number of arguments for 'GET'\r\n"),
 		},
 		{
 			name: "DEL wrong args",
-			cmd:  "DEL",
-			args: []string{},
-			want: "ERR wrong number of arguments for 'DEL'\n",
+			cmd:  resp.Command{Name: "DEL", Args: []string{}},
+			want: []byte("-ERR wrong number of arguments for 'DEL'\r\n"),
 		},
 		{
 			name: "Unknown command",
-			cmd:  "UNKNOWN",
-			args: []string{},
-			want: "ERR unknown command 'UNKNOWN'\n",
+			cmd:  resp.Command{Name: "UNKNOWN", Args: []string{}},
+			want: []byte("-ERR unknown command UNKNOWN\r\n"),
 		},
 	}
 
@@ -138,8 +77,8 @@ func TestExecuteCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := executeCommand(db, m, tt.cmd, tt.args)
-			if got != tt.want {
+			got := executeCommand(db, m, tt.cmd)
+			if !bytes.Equal(got, tt.want) {
 				t.Errorf("executeCommand() = %q, want %q", got, tt.want)
 			}
 		})
