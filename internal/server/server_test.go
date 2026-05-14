@@ -5,6 +5,7 @@ import (
 
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
+	"github.com/robin-vidal/kvgo/internal/resp"
 )
 
 func generateSampleConfig() *config.Config {
@@ -77,56 +78,48 @@ func TestExecuteCommand(t *testing.T) {
 
 	tests := []struct {
 		name string
-		cmd  string
+		cmd  resp.Command
 		args []string
 		want string
 	}{
 		{
 			name: "SET successful",
-			cmd:  "SET",
-			args: []string{"key1", "value1"},
+			cmd:  resp.Command{Name: "SET", Args: []string{"key1", "value1"}},
 			want: "OK\n",
 		},
 		{
 			name: "GET successful",
-			cmd:  "GET",
-			args: []string{"key1"},
+			cmd:  resp.Command{Name: "GET", Args: []string{"key1"}},
 			want: "value1\n",
 		},
 		{
 			name: "GET non-existent",
-			cmd:  "GET",
-			args: []string{"key2"},
+			cmd:  resp.Command{Name: "GET", Args: []string{"key2"}},
 			want: "(nil)\n",
 		},
 		{
 			name: "DEL successful",
-			cmd:  "DEL",
-			args: []string{"key1"},
+			cmd:  resp.Command{Name: "DEL", Args: []string{"key1"}},
 			want: "OK\n",
 		},
 		{
 			name: "SET wrong args",
-			cmd:  "SET",
-			args: []string{"key1"},
+			cmd:  resp.Command{Name: "SET", Args: []string{"key1"}},
 			want: "ERR wrong number of arguments for 'SET'\n",
 		},
 		{
 			name: "GET wrong args",
-			cmd:  "GET",
-			args: []string{},
+			cmd:  resp.Command{Name: "GET", Args: []string{}},
 			want: "ERR wrong number of arguments for 'GET'\n",
 		},
 		{
 			name: "DEL wrong args",
-			cmd:  "DEL",
-			args: []string{},
+			cmd:  resp.Command{Name: "DEL", Args: []string{}},
 			want: "ERR wrong number of arguments for 'DEL'\n",
 		},
 		{
 			name: "Unknown command",
-			cmd:  "UNKNOWN",
-			args: []string{},
+			cmd:  resp.Command{Name: "UNKNOWN", Args: []string{}},
 			want: "ERR unknown command 'UNKNOWN'\n",
 		},
 	}
@@ -138,7 +131,7 @@ func TestExecuteCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := executeCommand(db, m, tt.cmd, tt.args)
+			got := executeCommand(db, m, tt.cmd)
 			if got != tt.want {
 				t.Errorf("executeCommand() = %q, want %q", got, tt.want)
 			}
