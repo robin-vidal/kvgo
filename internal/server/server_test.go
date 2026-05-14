@@ -25,7 +25,6 @@ func TestExecuteCommand(t *testing.T) {
 	tests := []struct {
 		name string
 		cmd  resp.Command
-		args []string
 		want []byte
 	}{
 		{
@@ -67,6 +66,31 @@ func TestExecuteCommand(t *testing.T) {
 			name: "Unknown command",
 			cmd:  resp.Command{Name: "UNKNOWN", Args: []string{}},
 			want: []byte("-ERR unknown command UNKNOWN\r\n"),
+		},
+		{
+			name: "PING",
+			cmd:  resp.Command{Name: "PING", Args: []string{}},
+			want: []byte("+PONG\r\n"),
+		},
+		{
+			name: "COMMAND no args",
+			cmd:  resp.Command{Name: "COMMAND", Args: []string{}},
+			want: []byte("*0\r\n"),
+		},
+		{
+			name: "COMMAND DOCS",
+			cmd:  resp.Command{Name: "COMMAND", Args: []string{"DOCS"}},
+			want: []byte("*0\r\n"),
+		},
+		{
+			name: "COMMAND COUNT",
+			cmd:  resp.Command{Name: "COMMAND", Args: []string{"COUNT"}},
+			want: []byte(":5\r\n"),
+		},
+		{
+			name: "COMMAND unknown subcommand",
+			cmd:  resp.Command{Name: "COMMAND", Args: []string{"FOO"}},
+			want: []byte("-ERR unknown subcommand 'FOO'.\r\n"),
 		},
 	}
 

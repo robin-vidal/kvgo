@@ -23,6 +23,7 @@ func executeCommand(db *database.Database, m *metrics, cmd resp.Command) []byte 
 			m.recordCommand("SET", "err")
 			return resp.EncodeError("wrong number of arguments for 'SET'")
 		}
+
 		db.Set(cmd.Args[0], cmd.Args[1])
 		m.recordCommand("SET", "ok")
 		return resp.EncodeSimpleString("OK")
@@ -31,11 +32,13 @@ func executeCommand(db *database.Database, m *metrics, cmd resp.Command) []byte 
 			m.recordCommand("GET", "err")
 			return resp.EncodeError("wrong number of arguments for 'GET'")
 		}
+
 		val, ok := db.Get(cmd.Args[0])
 		if !ok {
 			m.recordCommand("GET", "miss")
 			return resp.EncodeNullBulkString()
 		}
+
 		m.recordCommand("GET", "ok")
 		return resp.EncodeBulkString(val)
 	case "DEL":
@@ -43,9 +46,33 @@ func executeCommand(db *database.Database, m *metrics, cmd resp.Command) []byte 
 			m.recordCommand("DEL", "err")
 			return resp.EncodeError("wrong number of arguments for 'DEL'")
 		}
+
 		db.Delete(cmd.Args[0])
 		m.recordCommand("DEL", "ok")
 		return resp.EncodeInteger(1)
+	case "PING":
+		m.recordCommand("PING", "ok")
+		return resp.EncodeSimpleString("PONG")
+	case "COMMAND":
+		// TODO: return COMMAND DOCS
+		if len(cmd.Args) == 0 {
+			m.recordCommand("COMMAND", "ok")
+			return resp.EncodeArray([][]byte{})
+		}
+
+		switch cmd.Args[0] {
+		case "DOCS":
+			// TODO: return COMMAND DOCS
+			m.recordCommand("COMMAND DOCS", "ok")
+			return resp.EncodeArray([][]byte{})
+		case "COUNT":
+			m.recordCommand("COMMAND COUNT", "ok")
+			return resp.EncodeInteger(5)
+		default:
+			m.recordCommand(cmd.Name, "err")
+			return resp.EncodeError("unknown subcommand '" + cmd.Args[0] + "'.")
+
+		}
 	default:
 		m.recordCommand(cmd.Name, "err")
 		return resp.EncodeError("unknown command " + string(cmd.Name))
