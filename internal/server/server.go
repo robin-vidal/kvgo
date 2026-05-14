@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
@@ -17,52 +16,40 @@ import (
 )
 
 // executeCommand dispatches the command based on its name and run it.
-func executeCommand(db *database.Database, m *metrics, cmd resp.Command) string {
+func executeCommand(db *database.Database, m *metrics, cmd resp.Command) []byte {
 	switch cmd.Name {
 	case "SET":
 		if len(cmd.Args) != 2 {
 			m.recordCommand("SET", "err")
-			return "ERR wrong number of arguments for 'SET'\n"
+			return resp.EncodeError("wrong number of arguments for 'SET'")
 		}
 		db.Set(cmd.Args[0], cmd.Args[1])
 		m.recordCommand("SET", "ok")
-		return "OK\n"
+		return resp.EncodeSimpleString("OK")
 	case "GET":
 		if len(cmd.Args) != 1 {
 			m.recordCommand("GET", "err")
-			return "ERR wrong number of arguments for 'GET'\n"
+			return resp.EncodeError("wrong number of arguments for 'GET'")
 		}
 		val, ok := db.Get(cmd.Args[0])
 		if !ok {
 			m.recordCommand("GET", "miss")
-			return "(nil)\n"
+			return resp.EncodeNullBulkString()
 		}
 		m.recordCommand("GET", "ok")
-		return val + "\n"
+		return resp.EncodeBulkString(val)
 	case "DEL":
 		if len(cmd.Args) != 1 {
 			m.recordCommand("DEL", "err")
-			return "ERR wrong number of arguments for 'DEL'\n"
+			return resp.EncodeError("wrong number of arguments for 'DEL'")
 		}
 		db.Delete(cmd.Args[0])
 		m.recordCommand("DEL", "ok")
-		return "OK\n"
+		return resp.EncodeInteger(1)
 	default:
 		m.recordCommand(cmd.Name, "err")
-		return fmt.Sprintf("ERR unknown command '%s'\n", cmd.Name)
+		return resp.EncodeError("unknown command " + string(cmd.Name))
 	}
-}
-
-// parseCommand parses the user input into a command and its arguments.
-func parseCommand(input string) (string, []string, error) {
-	input = strings.TrimSpace(input)
-	if input == "" {
-		return "", nil, errors.New("empty command")
-	}
-
-	fields := strings.Fields(input)
-
-	return strings.ToUpper(fields[0]), fields[1:], nil
 }
 
 // handleConnection manages a TCP connection, reading and executing commands in a loop.
@@ -95,7 +82,7 @@ func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
 
 		slog.Debug("executed", "cmd", cmd, "response", response)
 
-		_, err = fmt.Fprint(conn, response)
+		_, err = conn.Write(response)
 		if err != nil {
 			slog.Debug("failed to send response", "error", err)
 			break
