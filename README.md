@@ -33,6 +33,8 @@ Keys are distributed across `runtime.NumCPU()` shards via FNV-32a so concurrent 
 | `SET key value` | Store a key-value pair |
 | `GET key` | Retrieve a value by key |
 | `DEL key` | Delete a key |
+| `PING` | Test server liveness |
+| `COMMAND COUNT` | Return the number of supported commands |
 
 ## Quick start
 
