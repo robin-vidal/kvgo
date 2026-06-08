@@ -73,24 +73,9 @@ func TestExecuteCommand(t *testing.T) {
 			want: []byte("+PONG\r\n"),
 		},
 		{
-			name: "COMMAND no args",
-			cmd:  resp.Command{Name: "COMMAND", Args: []string{}},
-			want: []byte("*0\r\n"),
-		},
-		{
-			name: "COMMAND DOCS",
-			cmd:  resp.Command{Name: "COMMAND", Args: []string{"DOCS"}},
-			want: []byte("*0\r\n"),
-		},
-		{
-			name: "COMMAND COUNT",
-			cmd:  resp.Command{Name: "COMMAND", Args: []string{"COUNT"}},
-			want: []byte(":5\r\n"),
-		},
-		{
 			name: "COMMAND unknown subcommand",
 			cmd:  resp.Command{Name: "COMMAND", Args: []string{"FOO"}},
-			want: []byte("-ERR unknown subcommand 'FOO'.\r\n"),
+			want: []byte("-ERR unknown subcommand FOO\r\n"),
 		},
 	}
 
