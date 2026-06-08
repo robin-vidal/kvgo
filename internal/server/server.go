@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/robin-vidal/kvgo/internal/command"
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
@@ -17,66 +18,9 @@ import (
 
 // executeCommand dispatches the command based on its name and run it.
 func executeCommand(db *database.Database, m *metrics, cmd resp.Command) []byte {
-	switch cmd.Name {
-	case "SET":
-		if len(cmd.Args) != 2 {
-			m.recordCommand("SET", "err")
-			return resp.EncodeError("wrong number of arguments for 'SET'")
-		}
-
-		db.Set(cmd.Args[0], cmd.Args[1])
-		m.recordCommand("SET", "ok")
-		return resp.EncodeSimpleString("OK")
-	case "GET":
-		if len(cmd.Args) != 1 {
-			m.recordCommand("GET", "err")
-			return resp.EncodeError("wrong number of arguments for 'GET'")
-		}
-
-		val, ok := db.Get(cmd.Args[0])
-		if !ok {
-			m.recordCommand("GET", "miss")
-			return resp.EncodeNullBulkString()
-		}
-
-		m.recordCommand("GET", "ok")
-		return resp.EncodeBulkString(val)
-	case "DEL":
-		if len(cmd.Args) != 1 {
-			m.recordCommand("DEL", "err")
-			return resp.EncodeError("wrong number of arguments for 'DEL'")
-		}
-
-		db.Delete(cmd.Args[0])
-		m.recordCommand("DEL", "ok")
-		return resp.EncodeInteger(1)
-	case "PING":
-		m.recordCommand("PING", "ok")
-		return resp.EncodeSimpleString("PONG")
-	case "COMMAND":
-		// TODO: return COMMAND DOCS
-		if len(cmd.Args) == 0 {
-			m.recordCommand("COMMAND", "ok")
-			return resp.EncodeArray([][]byte{})
-		}
-
-		switch cmd.Args[0] {
-		case "DOCS":
-			// TODO: return COMMAND DOCS
-			m.recordCommand("COMMAND DOCS", "ok")
-			return resp.EncodeArray([][]byte{})
-		case "COUNT":
-			m.recordCommand("COMMAND COUNT", "ok")
-			return resp.EncodeInteger(5)
-		default:
-			m.recordCommand(cmd.Name, "err")
-			return resp.EncodeError("unknown subcommand '" + cmd.Args[0] + "'.")
-
-		}
-	default:
-		m.recordCommand(cmd.Name, "err")
-		return resp.EncodeError("unknown command " + string(cmd.Name))
-	}
+	res := command.Dispatch(db, cmd.Name, cmd.Args)
+	m.recordCommand(res.CmdName, res.Status)
+	return res.Response
 }
 
 // handleConnection manages a TCP connection, reading and executing commands in a loop.
