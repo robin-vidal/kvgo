@@ -60,6 +60,20 @@ func Encode(e Entry) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type reader struct {
+	data []byte
+	pos  int
+}
+
+func (r *reader) bytes(n int) ([]byte, error) {
+	if r.pos+n > len(r.data) {
+		return nil, errors.New("entry too short")
+	}
+	b := r.data[r.pos : r.pos+n]
+	r.pos += n
+	return b, nil
+}
+
 func Decode(b []byte) (Entry, error) {
 	if len(b) < checksumSize {
 		return Entry{}, errors.New("entry too short")
@@ -72,31 +86,60 @@ func Decode(b []byte) (Entry, error) {
 		return Entry{}, errors.New("checksum mismatch")
 	}
 
-	offset := 0
+	r := &reader{data: data}
 
-	seqNum := binary.BigEndian.Uint64(data[offset:])
-	offset += seqNumSize
+	b, err := r.bytes(seqNumSize)
+	if err != nil {
+		return Entry{}, err
+	}
+	seqNum := binary.BigEndian.Uint64(b)
 
-	commandLen := int(data[offset])
-	offset += commandLenSize
-	command := string(data[offset : offset+commandLen])
-	offset += commandLen
+	b, err = r.bytes(commandLenSize)
+	if err != nil {
+		return Entry{}, err
+	}
+	commandLen := int(b[0])
 
-	keyLen := int(binary.BigEndian.Uint16(data[offset:]))
-	offset += keyLenSize
-	key := string(data[offset : offset+keyLen])
-	offset += keyLen
+	b, err = r.bytes(commandLen)
+	if err != nil {
+		return Entry{}, err
+	}
+	command := string(b)
 
-	present := data[offset]
-	offset++
+	b, err = r.bytes(keyLenSize)
+	if err != nil {
+		return Entry{}, err
+	}
+	keyLen := int(binary.BigEndian.Uint16(b))
+
+	b, err = r.bytes(keyLen)
+	if err != nil {
+		return Entry{}, err
+	}
+	key := string(b)
+
+	b, err = r.bytes(1)
+	if err != nil {
+		return Entry{}, err
+	}
+	present := int(b[0])
 
 	var value *string
 	if present == 1 {
-		valueLen := int(binary.BigEndian.Uint16(data[offset:]))
-		offset += valueLenSize
-		s := string(data[offset : offset+valueLen])
+		b, err = r.bytes(valueLenSize)
+		if err != nil {
+			return Entry{}, err
+		}
+		valueLen := int(binary.BigEndian.Uint16(b))
+
+		b, err = r.bytes(valueLen)
+		if err != nil {
+			return Entry{}, err
+		}
+		s := string(b)
 		value = &s
-		offset += valueLen
+	} else if present != 0 {
+		return Entry{}, errors.New("invalid present byte")
 	}
 
 	return Entry{SeqNum: seqNum, Command: command, Key: key, Value: value}, nil
