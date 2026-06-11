@@ -1,8 +1,11 @@
 package command
 
 import (
+	"errors"
+
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
 var defaultRegistry = &registry{commands: make(map[string]*entry)}
@@ -88,4 +91,14 @@ func Dispatch(db *database.Database, name string, args []string) result {
 	res := s.handler(db, args)
 	res.CmdName = name
 	return res
+}
+
+func Apply(db *database.Database, e wal.Entry) error {
+	cmd, found := defaultRegistry.commands[e.Command]
+
+	if !found || cmd.spec.apply == nil {
+		return errors.New("command cannot be applied '" + e.Command + "'")
+	}
+
+	return cmd.spec.apply(db, e)
 }
