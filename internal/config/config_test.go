@@ -13,6 +13,7 @@ func TestParse(t *testing.T) {
 		wantPort        int
 		wantShardAmount int
 		wantDebug       bool
+		wantWalPath     string
 		wantErr         bool
 	}{
 		{
@@ -22,6 +23,7 @@ func TestParse(t *testing.T) {
 			wantPort:        6379,
 			wantShardAmount: runtime.NumCPU(),
 			wantDebug:       false,
+			wantWalPath:     "/var/lib/kvgo/wal.log",
 			wantErr:         false,
 		},
 		{
@@ -31,6 +33,7 @@ func TestParse(t *testing.T) {
 			wantPort:        6379,
 			wantShardAmount: 0,
 			wantDebug:       false,
+			wantWalPath:     "/var/lib/kvgo/wal.log",
 			wantErr:         true,
 		},
 	}
