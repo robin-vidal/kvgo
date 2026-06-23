@@ -2,11 +2,13 @@ package server
 
 import (
 	"bytes"
+	"path/filepath"
 	"testing"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
 func generateSampleConfig() *config.Config {
@@ -86,7 +88,15 @@ func TestExecuteCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := executeCommand(db, m, tt.cmd)
+			w, err := wal.Open(&config.WalConfig{
+				WalPath: filepath.Join(t.TempDir(), "wal.log"),
+			})
+			if err != nil {
+				t.Fatalf("Open() error = %v", err)
+			}
+			defer w.Close()
+
+			got := executeCommand(db, w, m, tt.cmd)
 			if !bytes.Equal(got, tt.want) {
 				t.Errorf("executeCommand() = %q, want %q", got, tt.want)
 			}

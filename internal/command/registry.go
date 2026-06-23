@@ -55,7 +55,7 @@ func (r *registry) register(s *spec) {
 	}
 }
 
-func Dispatch(db *database.Database, name string, args []string) result {
+func Dispatch(db *database.Database, w *wal.WAL, name string, args []string) result {
 	entry, found := defaultRegistry.commands[name]
 	if !found {
 		return result{
@@ -88,7 +88,7 @@ func Dispatch(db *database.Database, name string, args []string) result {
 		}
 	}
 
-	res := s.handler(db, args)
+	res := s.handler(db, w, args)
 	res.CmdName = name
 	return res
 }

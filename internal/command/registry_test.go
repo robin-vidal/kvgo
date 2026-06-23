@@ -2,6 +2,8 @@ package command
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/robin-vidal/kvgo/internal/config"
@@ -12,7 +14,7 @@ import (
 
 func ptr(s string) *string { return &s }
 
-func dummyHandler(db *database.Database, args []string) result {
+func dummyHandler(db *database.Database, w *wal.WAL, args []string) result {
 	return result{Response: resp.EncodeSimpleString("OK"), Status: "ok"}
 }
 
@@ -253,7 +255,15 @@ func TestDispatch(t *testing.T) {
 			db := generateSampleDB()
 			tt.setup(db)
 
-			got := Dispatch(db, tt.cmd, tt.args)
+			w, err := wal.Open(&config.WalConfig{
+				WalPath: filepath.Join(t.TempDir(), "wal.log"),
+			})
+			if err != nil {
+				t.Fatalf("Open() error = %v", err)
+			}
+			defer w.Close()
+
+			got := Dispatch(db, w, tt.cmd, tt.args)
 
 			if tt.wantResp != nil && !bytes.Equal(got.Response, tt.wantResp) {
 				t.Errorf("Dispatch() Response = %q, want %q", got.Response, tt.wantResp)
@@ -329,5 +339,37 @@ func TestApply(t *testing.T) {
 				t.Errorf("Apply() Error = %v, want %v", gotError, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestDispatch_WritesWAL(t *testing.T) {
+	db := generateSampleDB()
+	path := filepath.Join(t.TempDir(), "wal.log")
+	w, err := wal.Open(&config.WalConfig{WalPath: path})
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer w.Close()
+
+	Dispatch(db, w, "SET", []string{"foo", "bar"})
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	if len(data) == 0 {
+		t.Error("expected WAL file to contain an entry, got empty file")
+	}
+}
+
+func TestDispatch_WALFailureDoesNotModifyDB(t *testing.T) {
+	db := generateSampleDB()
+	w, _ := wal.Open(&config.WalConfig{WalPath: filepath.Join(t.TempDir(), "wal.log")})
+	w.Close()
+
+	Dispatch(db, w, "SET", []string{"foo", "bar"})
+
+	if _, ok := db.Get("foo"); ok {
+		t.Error("expected db to remain unmodified after WAL append failure")
 	}
 }

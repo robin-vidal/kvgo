@@ -23,6 +23,6 @@ type spec struct {
 	summary string
 	arity   int
 	args    []arg
-	handler func(db *database.Database, args []string) result
+	handler func(db *database.Database, w *wal.WAL, args []string) result
 	apply   func(db *database.Database, e wal.Entry) error
 }

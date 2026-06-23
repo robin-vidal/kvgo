@@ -14,7 +14,17 @@ func init() {
 		args: []arg{
 			{name: "key", kind: "key"},
 		},
-		handler: func(db *database.Database, args []string) result {
+		handler: func(db *database.Database, w *wal.WAL, args []string) result {
+			entry := wal.Entry{
+				Command: "DEL",
+				Key:     args[0],
+			}
+
+			err := w.Append(entry)
+			if err != nil {
+				return result{Response: resp.EncodeError(err.Error()), Status: "err"}
+			}
+
 			db.Delete(args[0])
 			return result{Response: resp.EncodeInteger(1), Status: "ok"}
 		},
