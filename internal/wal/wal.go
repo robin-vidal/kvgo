@@ -33,6 +33,10 @@ func (wal *WAL) Close() error {
 }
 
 func (wal *WAL) Append(e Entry) error {
+	if wal == nil || wal.file == nil {
+		return errors.New("wal not initialized")
+	}
+
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
 
