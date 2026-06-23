@@ -9,9 +9,10 @@ import (
 )
 
 type WAL struct {
-	file *os.File
-	cfg  *config.WalConfig
-	mu   sync.Mutex
+	file   *os.File
+	cfg    *config.WalConfig
+	mu     sync.Mutex
+	seqNum uint64
 }
 
 type Wal interface {
@@ -39,6 +40,9 @@ func (wal *WAL) Append(e Entry) error {
 
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
+
+	wal.seqNum++
+	e.SeqNum = wal.seqNum
 
 	encoded, err := Encode(e)
 	if err != nil {

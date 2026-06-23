@@ -14,6 +14,7 @@ import (
 	"github.com/robin-vidal/kvgo/internal/logger"
 	"github.com/robin-vidal/kvgo/internal/server"
 	"github.com/robin-vidal/kvgo/internal/telemetry"
+	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
 func main() {
@@ -33,7 +34,14 @@ func main() {
 
 	db := database.New(cfg)
 
-	err = server.Start(cfg, db)
+	w, err := wal.Open(cfg.WalConfig)
+	if err != nil {
+		slog.Error("failed to open WAL", "error", err)
+		os.Exit(1)
+	}
+	defer w.Close()
+
+	err = server.Start(cfg, db, w)
 	if err != nil {
 		slog.Error("server stopped unexpectedly", "error", err)
 		os.Exit(1)

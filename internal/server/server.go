@@ -14,17 +14,18 @@ import (
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
 // executeCommand dispatches the command based on its name and run it.
-func executeCommand(db *database.Database, m *metrics, cmd resp.Command) []byte {
-	res := command.Dispatch(db, cmd.Name, cmd.Args)
+func executeCommand(db *database.Database, w *wal.WAL, m *metrics, cmd resp.Command) []byte {
+	res := command.Dispatch(db, w, cmd.Name, cmd.Args)
 	m.recordCommand(res.CmdName, res.Status)
 	return res.Response
 }
 
 // handleConnection manages a TCP connection, reading and executing commands in a loop.
-func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
+func handleConnection(conn net.Conn, db *database.Database, w *wal.WAL, m *metrics) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			slog.Debug("failed to close connection", "error", err)
@@ -48,7 +49,7 @@ func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
 		}
 
 		start := time.Now()
-		response := executeCommand(db, m, cmd)
+		response := executeCommand(db, w, m, cmd)
 		m.recordDuration(cmd.Name, float64(time.Since(start).Microseconds()))
 
 		slog.Debug("executed", "cmd", cmd, "response", response)
@@ -62,7 +63,7 @@ func handleConnection(conn net.Conn, db *database.Database, m *metrics) {
 }
 
 // Start launches a TCP server according to the configuration
-func Start(cfg *config.Config, db *database.Database) error {
+func Start(cfg *config.Config, db *database.Database, w *wal.WAL) error {
 	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
@@ -88,6 +89,6 @@ func Start(cfg *config.Config, db *database.Database) error {
 			continue
 		}
 
-		go handleConnection(conn, db, m)
+		go handleConnection(conn, db, w, m)
 	}
 }

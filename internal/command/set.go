@@ -17,7 +17,18 @@ func init() {
 			{name: "key", kind: "key"},
 			{name: "value", kind: "string"},
 		},
-		handler: func(db *database.Database, args []string) result {
+		handler: func(db *database.Database, w *wal.WAL, args []string) result {
+			entry := wal.Entry{
+				Command: "SET",
+				Key:     args[0],
+				Value:   &args[1],
+			}
+
+			err := w.Append(entry)
+			if err != nil {
+				return result{Response: resp.EncodeError(err.Error()), Status: "err"}
+			}
+
 			db.Set(args[0], args[1])
 			return result{Response: resp.EncodeSimpleString("OK"), Status: "ok"}
 		},
