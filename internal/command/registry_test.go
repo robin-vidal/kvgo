@@ -7,7 +7,10 @@ import (
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/wal"
 )
+
+func ptr(s string) *string { return &s }
 
 func dummyHandler(db *database.Database, args []string) result {
 	return result{Response: resp.EncodeSimpleString("OK"), Status: "ok"}
@@ -260,6 +263,70 @@ func TestDispatch(t *testing.T) {
 			}
 			if got.Status != tt.wantStatus {
 				t.Errorf("Dispatch() Status = %v, want %v", got.Status, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestApply(t *testing.T) {
+	tests := []struct {
+		name    string
+		entry   wal.Entry
+		wantErr bool
+	}{
+		{
+			name: "SET",
+			entry: wal.Entry{
+				SeqNum:  1,
+				Command: "SET",
+				Key:     "foo",
+				Value:   ptr("bar"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "DEL",
+			entry: wal.Entry{
+				SeqNum:  2,
+				Command: "DEL",
+				Key:     "foo",
+			},
+			wantErr: false,
+		},
+		{
+			name: "SET no value",
+			entry: wal.Entry{
+				SeqNum:  3,
+				Command: "SET",
+				Key:     "foo",
+				Value:   nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Unknown Command",
+			entry: wal.Entry{
+				SeqNum:  4,
+				Command: "UNKNOWN",
+			},
+			wantErr: true,
+		},
+		{
+			name:    "Stateless command (no apply)",
+			entry:   wal.Entry{SeqNum: 5, Command: "PING"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := generateSampleDB()
+
+			got := Apply(db, tt.entry)
+			gotError := got != nil
+
+			if gotError != tt.wantErr {
+				t.Errorf("Apply() Error = %v, want %v", gotError, tt.wantErr)
 			}
 		})
 	}

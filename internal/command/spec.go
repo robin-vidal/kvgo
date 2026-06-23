@@ -1,6 +1,9 @@
 package command
 
-import "github.com/robin-vidal/kvgo/internal/database"
+import (
+	"github.com/robin-vidal/kvgo/internal/database"
+	"github.com/robin-vidal/kvgo/internal/wal"
+)
 
 type result struct {
 	Response []byte
@@ -21,4 +24,5 @@ type spec struct {
 	arity   int
 	args    []arg
 	handler func(db *database.Database, args []string) result
+	apply   func(db *database.Database, e wal.Entry) error
 }

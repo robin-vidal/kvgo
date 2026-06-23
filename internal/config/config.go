@@ -15,6 +15,7 @@ type Config struct {
 	Port        int
 	Debug       bool
 	ShardAmount int
+	WalConfig   *WalConfig
 }
 
 func validateShardAmount(shardAmount int) error {
@@ -35,6 +36,11 @@ func Parse(args []string) (*Config, error) {
 	fs.IntVar(&cfg.Port, "port", 6379, "The port to listen on")
 	fs.BoolVar(&cfg.Debug, "debug", false, "Enable debug mode")
 	fs.IntVar(&cfg.ShardAmount, "shardAmount", runtime.NumCPU(), "The number of shards")
+
+	walCfg := &WalConfig{}
+	walCfg.Parse(fs)
+
+	cfg.WalConfig = walCfg
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of kvgo:\n")
