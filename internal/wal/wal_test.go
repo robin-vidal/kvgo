@@ -164,3 +164,105 @@ func TestAppend(t *testing.T) {
 		})
 	}
 }
+
+func TestReplay_NoExistingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.log")
+	w := &WAL{cfg: &config.WalConfig{WalPath: path}}
+
+	entries, err := w.Replay()
+	if err != nil || entries != nil {
+		t.Fatalf("Replay() = %v, %v, want nil, nil", entries, err)
+	}
+}
+
+func TestReplay_AllValidEntries(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "wal.log")
+	w, _ := Open(&config.WalConfig{WalPath: path})
+
+	want := []Entry{
+		{Command: "SET", Key: "foo", Value: ptr("bar")},
+		{Command: "DEL", Key: "foo"},
+		{Command: "SET", Key: "baz", Value: ptr("qux")},
+	}
+	for _, e := range want {
+		w.Append(e)
+	}
+	w.Close()
+
+	w2, _ := Open(&config.WalConfig{WalPath: path})
+	defer w2.Close()
+
+	got, err := w2.Replay()
+	if err != nil {
+		t.Fatalf("Replay() error = %v", err)
+	}
+	if len(got) != len(want) {
+		t.Fatalf("Replay() = %d entries, want %d", len(got), len(want))
+	}
+	for i, e := range got {
+		if e.Command != want[i].Command || e.Key != want[i].Key || !valueEqual(e.Value, want[i].Value) {
+			t.Errorf("entry %d = %+v, want %+v", i, e, want[i])
+		}
+	}
+}
+
+func TestReplay_TruncatesCorruptedTrailingEntry(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "wal.log")
+	w, _ := Open(&config.WalConfig{WalPath: path})
+	w.Append(Entry{Command: "SET", Key: "foo", Value: ptr("bar")})
+	w.Close()
+
+	validSize, _ := os.Stat(path)
+
+	f, _ := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0644)
+	f.Write([]byte{0, 0, 0, 0, 0, 0, 0, 2, 3})
+	f.Close()
+
+	w2, _ := Open(&config.WalConfig{WalPath: path})
+	defer w2.Close()
+
+	got, err := w2.Replay()
+	if err != nil {
+		t.Fatalf("Replay() error = %v", err)
+	}
+	if len(got) != 1 || got[0].Key != "foo" {
+		t.Fatalf("Replay() = %+v, want 1 entry with Key=foo", got)
+	}
+
+	info, _ := os.Stat(path)
+	if info.Size() != validSize.Size() {
+		t.Errorf("size = %d, want %d", info.Size(), validSize.Size())
+	}
+}
+
+func TestReplay_SeqNumContinuesAfterRestart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "wal.log")
+	w, _ := Open(&config.WalConfig{WalPath: path})
+	w.Append(Entry{Command: "SET", Key: "a", Value: ptr("1")})
+	w.Append(Entry{Command: "SET", Key: "b", Value: ptr("2")})
+	w.Close()
+
+	w2, _ := Open(&config.WalConfig{WalPath: path})
+	if _, err := w2.Replay(); err != nil {
+		t.Fatalf("Replay() error = %v", err)
+	}
+
+	if err := w2.Append(Entry{Command: "SET", Key: "c", Value: ptr("3")}); err != nil {
+		t.Fatalf("Append() error = %v", err)
+	}
+	w2.Close()
+
+	w3, _ := Open(&config.WalConfig{WalPath: path})
+	defer w3.Close()
+
+	entries, err := w3.Replay()
+	if err != nil {
+		t.Fatalf("Replay() error = %v", err)
+	}
+	if len(entries) != 3 {
+		t.Fatalf("got %d entries, want 3", len(entries))
+	}
+	if entries[2].SeqNum != 3 {
+		t.Errorf("third entry SeqNum = %d, want 3", entries[2].SeqNum)
+	}
+}

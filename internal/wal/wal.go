@@ -1,7 +1,9 @@
 package wal
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"os"
 	"sync"
 
@@ -18,6 +20,7 @@ type WAL struct {
 type Wal interface {
 	Append(e Entry) error
 	Close() error
+	Replay() ([]Entry, error)
 }
 
 func Open(cfg *config.WalConfig) (*WAL, error) {
@@ -59,4 +62,43 @@ func (wal *WAL) Append(e Entry) error {
 	}
 
 	return wal.file.Sync()
+}
+
+func (wal *WAL) Replay() ([]Entry, error) {
+	file, err := os.Open(wal.cfg.WalPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer file.Close()
+
+	r := bufio.NewReader(file)
+	var entries []Entry
+
+	var offset int64 = 0
+
+	for {
+		entry, n, err := decodeOne(r)
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			if truncErr := os.Truncate(wal.cfg.WalPath, offset); truncErr != nil {
+				return nil, truncErr
+			}
+			break
+		}
+
+		offset += int64(n)
+		entries = append(entries, entry)
+	}
+
+	if len(entries) > 0 {
+		wal.seqNum = entries[len(entries)-1].SeqNum
+	}
+
+	return entries, nil
 }

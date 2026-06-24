@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/robin-vidal/kvgo/internal/command"
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/logger"
@@ -40,6 +41,19 @@ func main() {
 		os.Exit(1)
 	}
 	defer w.Close()
+
+	entries, err := w.Replay()
+	if err != nil {
+		slog.Error("failed to replay WAL", "error", err)
+		os.Exit(1)
+	}
+
+	for _, e := range entries {
+		if err := command.Apply(db, e); err != nil {
+			slog.Error("failed to apply WAL entry during replay", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	err = server.Start(cfg, db, w)
 	if err != nil {
