@@ -1,6 +1,8 @@
 package wal
 
 import (
+	"bufio"
+	"bytes"
 	"slices"
 	"strings"
 	"testing"
@@ -182,6 +184,68 @@ func TestDecodeErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if _, err := Decode(tt.corrupt(valid)); err == nil {
 				t.Error("Decode() expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestDecodeOneTwoEntriesInSequence(t *testing.T) {
+	e1 := Entry{SeqNum: 1, Command: "SET", Key: "foo", Value: ptr("bar")}
+	e2 := Entry{SeqNum: 2, Command: "DEL", Key: "foo"}
+
+	enc1, _ := Encode(e1)
+	enc2, _ := Encode(e2)
+
+	r := bufio.NewReader(bytes.NewReader(append(slices.Clone(enc1), enc2...)))
+
+	got1, n1, err := decodeOne(r)
+	if err != nil {
+		t.Fatalf("decodeOne() first entry error = %v", err)
+	}
+	if n1 != len(enc1) || got1.Command != "SET" {
+		t.Errorf("first entry mismatch: n=%d want=%d, command=%q", n1, len(enc1), got1.Command)
+	}
+
+	got2, n2, err := decodeOne(r)
+	if err != nil {
+		t.Fatalf("decodeOne() second entry error = %v", err)
+	}
+	if n2 != len(enc2) || got2.Command != "DEL" {
+		t.Errorf("second entry mismatch: n=%d want=%d, command=%q", n2, len(enc2), got2.Command)
+	}
+}
+
+func TestDecodeOneErrors(t *testing.T) {
+	valid, err := Encode(Entry{SeqNum: 1, Command: "SET", Key: "foo", Value: ptr("bar")})
+	if err != nil {
+		t.Fatalf("setup Encode() error = %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		corrupt func([]byte) []byte
+	}{
+		{
+			name: "corrupted checksum",
+			corrupt: func(b []byte) []byte {
+				c := slices.Clone(b)
+				c[len(c)-1] ^= 0xFF
+				return c
+			},
+		},
+		{
+			name: "truncated mid-entry",
+			corrupt: func(b []byte) []byte {
+				return b[:len(b)-3]
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := bufio.NewReader(bytes.NewReader(tt.corrupt(valid)))
+			if _, _, err := decodeOne(r); err == nil {
+				t.Error("decodeOne() expected error, got nil")
 			}
 		})
 	}
