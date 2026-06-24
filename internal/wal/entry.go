@@ -1,10 +1,12 @@
 package wal
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"hash/crc32"
+	"io"
 )
 
 const (
@@ -143,4 +145,98 @@ func Decode(b []byte) (Entry, error) {
 	}
 
 	return Entry{SeqNum: seqNum, Command: command, Key: key, Value: value}, nil
+}
+
+func decodeOne(r *bufio.Reader) (Entry, int, error) {
+	var raw bytes.Buffer
+	tr := io.TeeReader(r, &raw)
+
+	readField := func(n int) ([]byte, error) {
+		buf := make([]byte, n)
+		if _, err := io.ReadFull(tr, buf); err != nil {
+			if raw.Len() == 0 {
+				return nil, io.EOF
+			}
+
+			if err == io.EOF {
+				return nil, io.ErrUnexpectedEOF
+			}
+			return nil, err
+		}
+		return buf, nil
+	}
+
+	buf, err := readField(seqNumSize)
+	if err != nil {
+		return Entry{}, 0, err
+	}
+	seqNum := binary.BigEndian.Uint64(buf)
+
+	buf, err = readField(commandLenSize)
+	if err != nil {
+		return Entry{}, 0, err
+	}
+	commandLen := int(buf[0])
+
+	buf, err = readField(commandLen)
+	if err != nil {
+		return Entry{}, 0, err
+	}
+	command := string(buf)
+
+	buf, err = readField(keyLenSize)
+	if err != nil {
+		return Entry{}, 0, err
+	}
+	keyLen := int(binary.BigEndian.Uint16(buf))
+
+	buf, err = readField(keyLen)
+	if err != nil {
+		return Entry{}, 0, err
+	}
+	key := string(buf)
+
+	buf, err = readField(1)
+	if err != nil {
+		return Entry{}, 0, err
+	}
+	present := int(buf[0])
+
+	var value *string
+	if present == 1 {
+		buf, err = readField(valueLenSize)
+		if err != nil {
+			return Entry{}, 0, err
+		}
+		valueLen := int(binary.BigEndian.Uint16(buf))
+
+		buf, err = readField(valueLen)
+		if err != nil {
+			return Entry{}, 0, err
+		}
+		s := string(buf)
+		value = &s
+	} else if present != 0 {
+		return Entry{}, 0, errors.New("invalid present byte")
+	}
+
+	checksumBuf := make([]byte, checksumSize)
+	if _, err := io.ReadFull(r, checksumBuf); err != nil {
+		if err == io.EOF {
+			return Entry{}, 0, io.ErrUnexpectedEOF
+		}
+		return Entry{}, 0, err
+	}
+	storedChecksum := binary.BigEndian.Uint32(checksumBuf)
+
+	if crc32.ChecksumIEEE(raw.Bytes()) != storedChecksum {
+		return Entry{}, 0, errors.New("checksum mismatch")
+	}
+
+	return Entry{
+		SeqNum:  seqNum,
+		Command: command,
+		Key:     key,
+		Value:   value,
+	}, raw.Len() + checksumSize, nil
 }
