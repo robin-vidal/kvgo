@@ -26,6 +26,11 @@ func init() {
 			}
 
 			db.Delete(args[0])
+
+			if w.ShouldCompact() {
+				w.Compact(db.Dump())
+			}
+
 			return result{Response: resp.EncodeInteger(1), Status: "ok"}
 		},
 		apply: func(db *database.Database, e wal.Entry) error {

@@ -30,6 +30,11 @@ func init() {
 			}
 
 			db.Set(args[0], args[1])
+
+			if w.ShouldCompact() {
+				w.Compact(db.Dump())
+			}
+
 			return result{Response: resp.EncodeSimpleString("OK"), Status: "ok"}
 		},
 		apply: func(db *database.Database, e wal.Entry) error {
