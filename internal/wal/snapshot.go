@@ -113,3 +113,20 @@ func (wal *WAL) Compact(data map[string]string, snapshotSeqNum uint64) error {
 
 	return wal.truncate(snapshotSeqNum)
 }
+
+func (wal *WAL) LoadSnapshot() (map[string]string, error) {
+	f, err := os.Open(wal.cfg.SnapshotPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer f.Close()
+
+	var data map[string]string
+	if err := gob.NewDecoder(f).Decode(&data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
