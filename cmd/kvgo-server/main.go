@@ -42,6 +42,15 @@ func main() {
 	}
 	defer w.Close()
 
+	snapshot, err := w.LoadSnapshot()
+	if err != nil {
+		slog.Error("failed to load snapshot", "error", err)
+		os.Exit(1)
+	}
+	for k, v := range snapshot {
+		db.Set(k, v)
+	}
+
 	entries, err := w.Replay()
 	if err != nil {
 		slog.Error("failed to replay WAL", "error", err)

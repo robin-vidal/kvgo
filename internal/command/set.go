@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"log/slog"
 
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
@@ -30,6 +31,15 @@ func init() {
 			}
 
 			db.Set(args[0], args[1])
+
+			if w.ShouldCompact() {
+				if w.ShouldCompact() {
+					if err := maybeCompact(db, w); err != nil {
+						slog.Error("compaction failed", "error", err)
+					}
+				}
+			}
+
 			return result{Response: resp.EncodeSimpleString("OK"), Status: "ok"}
 		},
 		apply: func(db *database.Database, e wal.Entry) error {

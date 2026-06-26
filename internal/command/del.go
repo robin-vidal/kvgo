@@ -1,6 +1,8 @@
 package command
 
 import (
+	"log/slog"
+
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
 	"github.com/robin-vidal/kvgo/internal/wal"
@@ -26,6 +28,13 @@ func init() {
 			}
 
 			db.Delete(args[0])
+
+			if w.ShouldCompact() {
+				if err := maybeCompact(db, w); err != nil {
+					slog.Error("compaction failed", "error", err)
+				}
+			}
+
 			return result{Response: resp.EncodeInteger(1), Status: "ok"}
 		},
 		apply: func(db *database.Database, e wal.Entry) error {

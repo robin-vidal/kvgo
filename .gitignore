@@ -4,3 +4,10 @@ bin/
 # coverage
 coverage.html
 coverage.out
+
+# local runtime data (WAL, snapshots, debug)
+.tmp/
+__debug*
+
+# editor
+.zed/

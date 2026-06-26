@@ -3,6 +3,7 @@ package database
 
 import (
 	"hash/fnv"
+	"maps"
 	"sync"
 
 	"github.com/robin-vidal/kvgo/internal/config"
@@ -75,4 +76,16 @@ func (db *Database) GetKeyAmountPerShard() []int {
 	}
 
 	return amountPerShard
+}
+
+func (db *Database) Dump() map[string]string {
+	dump := make(map[string]string)
+
+	for i := range db.shards {
+		db.shards[i].mu.RLock()
+		maps.Copy(dump, db.shards[i].data)
+		db.shards[i].mu.RUnlock()
+	}
+
+	return dump
 }

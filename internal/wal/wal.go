@@ -102,3 +102,16 @@ func (wal *WAL) Replay() ([]Entry, error) {
 
 	return entries, nil
 }
+
+func (wal *WAL) ShouldCompact() bool {
+	if wal.cfg.CompactionThreshold <= 0 {
+		return false
+	}
+	return wal.seqNum > 0 && wal.seqNum%uint64(wal.cfg.CompactionThreshold) == 0
+}
+
+func (wal *WAL) CurrentSeqNum() uint64 {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
+	return wal.seqNum
+}
