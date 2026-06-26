@@ -7,34 +7,40 @@ import (
 
 func TestParse(t *testing.T) {
 	tests := []struct {
-		name            string
-		args            []string
-		wantHost        string
-		wantPort        int
-		wantShardAmount int
-		wantDebug       bool
-		wantWalPath     string
-		wantErr         bool
+		name                    string
+		args                    []string
+		wantHost                string
+		wantPort                int
+		wantShardAmount         int
+		wantDebug               bool
+		wantWalPath             string
+		wantSnapshotPath        string
+		wantCompactionThreshold int
+		wantErr                 bool
 	}{
 		{
-			name:            "Default values",
-			args:            []string{},
-			wantHost:        "0.0.0.0",
-			wantPort:        6379,
-			wantShardAmount: runtime.NumCPU(),
-			wantDebug:       false,
-			wantWalPath:     "/var/lib/kvgo/wal.log",
-			wantErr:         false,
+			name:                    "Default values",
+			args:                    []string{},
+			wantHost:                "0.0.0.0",
+			wantPort:                6379,
+			wantShardAmount:         runtime.NumCPU(),
+			wantDebug:               false,
+			wantWalPath:             "/var/lib/kvgo/wal.log",
+			wantSnapshotPath:        "/var/lib/kvgo/snapshot.db",
+			wantCompactionThreshold: 10000,
+			wantErr:                 false,
 		},
 		{
-			name:            "Zero Shard",
-			args:            []string{"--shardAmount=0"},
-			wantHost:        "0.0.0.0",
-			wantPort:        6379,
-			wantShardAmount: 0,
-			wantDebug:       false,
-			wantWalPath:     "/var/lib/kvgo/wal.log",
-			wantErr:         true,
+			name:                    "Zero Shard",
+			args:                    []string{"--shardAmount=0"},
+			wantHost:                "0.0.0.0",
+			wantPort:                6379,
+			wantShardAmount:         0,
+			wantDebug:               false,
+			wantWalPath:             "/var/lib/kvgo/wal.log",
+			wantSnapshotPath:        "/var/lib/kvgo/snapshot.db",
+			wantCompactionThreshold: 10000,
+			wantErr:                 true,
 		},
 	}
 
