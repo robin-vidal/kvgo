@@ -22,9 +22,9 @@ func TestOpen(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "unknown path",
-			path:    "unknown/path.wal",
-			wantErr: true,
+			name:    "creates missing parent directory",
+			path:    "missing/dir/path.wal",
+			wantErr: false,
 		},
 	}
 
