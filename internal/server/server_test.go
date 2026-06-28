@@ -22,7 +22,10 @@ func generateSampleConfig() *config.Config {
 
 func TestExecuteCommand(t *testing.T) {
 	cfg := generateSampleConfig()
-	db := database.New(cfg)
+	db, err := database.New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
 
 	tests := []struct {
 		name string

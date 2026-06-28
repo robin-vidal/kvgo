@@ -10,7 +10,7 @@ import (
 
 func TestMaybeCompact(t *testing.T) {
 	dir := t.TempDir()
-	db := generateSampleDB()
+	db := generateSampleDB(t)
 
 	w, err := wal.Open(&config.WalConfig{
 		WalPath:             filepath.Join(dir, "wal.log"),

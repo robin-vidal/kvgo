@@ -18,13 +18,18 @@ func dummyHandler(db *database.Database, w *wal.WAL, args []string) result {
 	return result{Response: resp.EncodeSimpleString("OK"), Status: "ok"}
 }
 
-func generateSampleDB() *database.Database {
-	return database.New(&config.Config{
+func generateSampleDB(t *testing.T) *database.Database {
+	t.Helper()
+	db, err := database.New(&config.Config{
 		Host:        "localhost",
 		Port:        6379,
 		Debug:       false,
 		ShardAmount: 2,
 	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	return db
 }
 
 func TestRegister(t *testing.T) {
@@ -252,7 +257,7 @@ func TestDispatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := generateSampleDB()
+			db := generateSampleDB(t)
 			tt.setup(db)
 
 			w, err := wal.Open(&config.WalConfig{
@@ -330,7 +335,7 @@ func TestApply(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := generateSampleDB()
+			db := generateSampleDB(t)
 
 			got := Apply(db, tt.entry)
 			gotError := got != nil
@@ -343,7 +348,7 @@ func TestApply(t *testing.T) {
 }
 
 func TestDispatch_WritesWAL(t *testing.T) {
-	db := generateSampleDB()
+	db := generateSampleDB(t)
 	path := filepath.Join(t.TempDir(), "wal.log")
 	w, err := wal.Open(&config.WalConfig{WalPath: path})
 	if err != nil {
@@ -363,7 +368,7 @@ func TestDispatch_WritesWAL(t *testing.T) {
 }
 
 func TestDispatch_WALFailureDoesNotModifyDB(t *testing.T) {
-	db := generateSampleDB()
+	db := generateSampleDB(t)
 	w, _ := wal.Open(&config.WalConfig{WalPath: filepath.Join(t.TempDir(), "wal.log")})
 	w.Close()
 

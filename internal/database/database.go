@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"maps"
 	"sync"
+	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 )
@@ -16,11 +17,12 @@ type databaseShard struct {
 
 // Database stores application data.
 type Database struct {
-	shards []databaseShard
+	shards  []databaseShard
+	metrics *metrics
 }
 
 // New creates and returns a new instance of the database.
-func New(cfg *config.Config) *Database {
+func New(cfg *config.Config) (*Database, error) {
 	db := &Database{
 		shards: make([]databaseShard, cfg.ShardAmount),
 	}
@@ -29,35 +31,56 @@ func New(cfg *config.Config) *Database {
 		db.shards[i].data = make(map[string]string)
 	}
 
-	return db
+	m, err := newMetrics()
+	if err != nil {
+		return nil, err
+	}
+	db.metrics = m
+
+	return db, nil
 }
 
 // Set defines the value for a specific key in the map.
 func (db *Database) Set(key, value string) {
-	shard := &db.shards[getShard(key, len(db.shards))]
+	idx := getShard(key, len(db.shards))
+	shard := &db.shards[idx]
 
+	start := time.Now()
 	shard.mu.Lock()
-	defer shard.mu.Unlock()
+	waited := time.Since(start)
 	shard.data[key] = value
+	shard.mu.Unlock()
+
+	db.metrics.record(idx, "set", "write", waited)
 }
 
 // Get retrieves the value in the map for a specific key.
 func (db *Database) Get(key string) (string, bool) {
-	shard := &db.shards[getShard(key, len(db.shards))]
+	idx := getShard(key, len(db.shards))
+	shard := &db.shards[idx]
 
+	start := time.Now()
 	shard.mu.RLock()
-	defer shard.mu.RUnlock()
+	waited := time.Since(start)
 	val, ok := shard.data[key]
+	shard.mu.RUnlock()
+
+	db.metrics.record(idx, "get", "read", waited)
 	return val, ok
 }
 
 // Delete remove the key in the map.
 func (db *Database) Delete(key string) {
-	shard := &db.shards[getShard(key, len(db.shards))]
+	idx := getShard(key, len(db.shards))
+	shard := &db.shards[idx]
 
+	start := time.Now()
 	shard.mu.Lock()
-	defer shard.mu.Unlock()
+	waited := time.Since(start)
 	delete(shard.data, key)
+	shard.mu.Unlock()
+
+	db.metrics.record(idx, "delete", "write", waited)
 }
 
 func getShard(key string, shardAmount int) int {

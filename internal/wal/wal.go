@@ -7,15 +7,17 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 )
 
 type WAL struct {
-	file   *os.File
-	cfg    *config.WalConfig
-	mu     sync.Mutex
-	seqNum uint64
+	file    *os.File
+	cfg     *config.WalConfig
+	mu      sync.Mutex
+	seqNum  uint64
+	metrics *metrics
 }
 
 type Wal interface {
@@ -34,17 +36,30 @@ func Open(cfg *config.WalConfig) (*WAL, error) {
 		return nil, err
 	}
 
-	return &WAL{file: file, cfg: cfg}, nil
+	wal := &WAL{file: file, cfg: cfg}
+
+	m, err := newMetrics(wal)
+	if err != nil {
+		return nil, err
+	}
+	wal.metrics = m
+
+	return wal, nil
 }
 
 func (wal *WAL) Close() error {
 	return wal.file.Close()
 }
 
-func (wal *WAL) Append(e Entry) error {
+func (wal *WAL) Append(e Entry) (err error) {
 	if wal == nil || wal.file == nil {
 		return errors.New("wal not initialized")
 	}
+
+	start := time.Now()
+	defer func() {
+		wal.metrics.recordAppend(time.Since(start), err)
+	}()
 
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
@@ -69,7 +84,12 @@ func (wal *WAL) Append(e Entry) error {
 	return wal.file.Sync()
 }
 
-func (wal *WAL) Replay() ([]Entry, error) {
+func (wal *WAL) Replay() (entries []Entry, err error) {
+	start := time.Now()
+	defer func() {
+		wal.metrics.recordReplay(time.Since(start), len(entries))
+	}()
+
 	file, err := os.Open(wal.cfg.WalPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -80,7 +100,6 @@ func (wal *WAL) Replay() ([]Entry, error) {
 	defer file.Close()
 
 	r := bufio.NewReader(file)
-	var entries []Entry
 
 	var offset int64 = 0
 
