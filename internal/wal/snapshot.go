@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"io"
 	"os"
+	"time"
 )
 
 func (wal *WAL) Snapshot(data map[string]string) error {
@@ -106,8 +107,13 @@ func (wal *WAL) truncate(snapshotSeqNum uint64) error {
 	return nil
 }
 
-func (wal *WAL) Compact(data map[string]string, snapshotSeqNum uint64) error {
-	if err := wal.Snapshot(data); err != nil {
+func (wal *WAL) Compact(data map[string]string, snapshotSeqNum uint64) (err error) {
+	start := time.Now()
+	defer func() {
+		wal.metrics.recordCompaction(time.Since(start), err)
+	}()
+
+	if err = wal.Snapshot(data); err != nil {
 		return err
 	}
 
