@@ -5,9 +5,14 @@ import (
 	"encoding/gob"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 func (wal *WAL) Snapshot(data map[string]string) error {
+	if err := os.MkdirAll(filepath.Dir(wal.cfg.SnapshotPath), 0o755); err != nil {
+		return err
+	}
+
 	tmpPath := wal.cfg.SnapshotPath + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {

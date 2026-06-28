@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/robin-vidal/kvgo/internal/config"
@@ -24,6 +25,10 @@ type Wal interface {
 }
 
 func Open(cfg *config.WalConfig) (*WAL, error) {
+	if err := os.MkdirAll(filepath.Dir(cfg.WalPath), 0o755); err != nil {
+		return nil, err
+	}
+
 	file, err := os.OpenFile(cfg.WalPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err
