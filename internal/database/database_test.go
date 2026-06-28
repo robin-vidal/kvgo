@@ -44,7 +44,10 @@ func TestGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := generateSampleConfig(2)
-			db := New(cfg)
+			db, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
 
 			for key, val := range tt.data {
 				db.Set(key, val)
@@ -85,7 +88,10 @@ func TestSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := generateSampleConfig(2)
-			db := New(cfg)
+			db, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
 
 			for key, val := range tt.data {
 				db.Set(key, val)
@@ -125,7 +131,10 @@ func TestDelete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := generateSampleConfig(2)
-			db := New(cfg)
+			db, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
 
 			for key, val := range tt.data {
 				db.Set(key, val)
@@ -143,7 +152,10 @@ func TestDelete(t *testing.T) {
 
 func TestDatabaseConcurrency(t *testing.T) {
 	cfg := generateSampleConfig(2)
-	db := New(cfg)
+	db, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
 
 	const workers int = 50
 	const iterations int = 1000
@@ -237,7 +249,10 @@ func TestGetKeyAmountPerShard(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := generateSampleConfig(tt.shardAmount)
-			db := New(cfg)
+			db, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
 
 			for key, value := range tt.data {
 				db.Set(key, value)

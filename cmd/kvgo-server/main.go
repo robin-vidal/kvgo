@@ -33,7 +33,11 @@ func main() {
 	}
 	defer shutdown(context.Background())
 
-	db := database.New(cfg)
+	db, err := database.New(cfg)
+	if err != nil {
+		slog.Error("failed to initialize database", "error", err)
+		os.Exit(1)
+	}
 
 	w, err := wal.Open(cfg.WalConfig)
 	if err != nil {
