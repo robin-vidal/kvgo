@@ -143,14 +143,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "db_commands_total",
+          "expr": "sum by (command, status) (rate(db_commands_total[1m]))",
           "instant": false,
           "legendFormat": "{{command}} / {{status}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Command throughput",
+      "title": "Command throughput (ops/s)",
       "type": "timeseries"
     },
     {
@@ -234,10 +234,32 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(db_commands_duration_us_microseconds_sum[1m]) / rate(db_commands_duration_us_microseconds_count[1m])",
-          "legendFormat": "{{command}}",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(db_commands_duration_us_microseconds_bucket[1m])))",
+          "legendFormat": "p50",
           "range": true,
           "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(db_commands_duration_us_microseconds_bucket[1m])))",
+          "legendFormat": "p95",
+          "range": true,
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(db_commands_duration_us_microseconds_bucket[1m])))",
+          "legendFormat": "p99",
+          "range": true,
+          "refId": "C",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -531,6 +553,103 @@
       ],
       "title": "Heap Usage",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum by (command) (rate(db_commands_total{status=\"err\"}[1m]))",
+          "instant": false,
+          "legendFormat": "{{command}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Command error rate (errors/s)",
+      "type": "timeseries"
     }
   ],
   "preload": false,

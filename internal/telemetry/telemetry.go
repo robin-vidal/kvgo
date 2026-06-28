@@ -2,6 +2,8 @@ package telemetry
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -31,8 +33,11 @@ func Init() (shutdown func(context.Context) error, err error) {
 	otel.SetMeterProvider(provider)
 
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(":2112", nil)
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(":2112", mux); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("metrics server stopped", "error", err)
+		}
 	}()
 
 	return provider.Shutdown, nil
