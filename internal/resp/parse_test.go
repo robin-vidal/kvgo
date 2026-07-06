@@ -155,31 +155,49 @@ func TestParseLen(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
+		max     int
 		want    int
 		wantErr bool
 	}{
 		{
 			name:    "Valid Bulk String Prefix",
 			input:   "$6\r\n",
+			max:     maxBulkStringLen,
 			want:    6,
 			wantErr: false,
 		},
 		{
 			name:    "Valid Array Prefix",
 			input:   "*3\r\n",
+			max:     maxArrayLen,
 			want:    3,
 			wantErr: false,
 		},
 		{
 			name:    "Invalid Number",
 			input:   "$abc\r\n",
+			max:     maxBulkStringLen,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Negative Length",
+			input:   "*-1\r\n",
+			max:     maxArrayLen,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Exceeds Max",
+			input:   "*2000\r\n",
+			max:     maxArrayLen,
 			want:    0,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseLen(tt.input)
+			got, err := parseLen(tt.input, tt.max)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("parseLen() error %v, wantErr %v", err, tt.wantErr)
 			}
@@ -187,5 +205,21 @@ func TestParseLen(t *testing.T) {
 				t.Errorf("parseLen() got %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseCommandNegativeLen(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader("*-1\r\n"))
+	_, err := ParseCommand(reader)
+	if err == nil {
+		t.Fatal("expected error for negative array length, got nil")
+	}
+}
+
+func TestParseBulkStringNegativeLen(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader("$-1\r\nfoo\r\n"))
+	_, err := parseBulkString(reader)
+	if err == nil {
+		t.Fatal("expected error for negative bulk string length, got nil")
 	}
 }
