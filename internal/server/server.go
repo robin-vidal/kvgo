@@ -34,6 +34,12 @@ func handleConnection(conn net.Conn, s *store.Store, m *metrics) {
 	slog.Debug("new TCP connection", "remoteAddr", conn.RemoteAddr())
 	m.recordConnection(1)
 
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("panic in connection handler", "recover", r, "remoteAddr", conn.RemoteAddr())
+		}
+	}()
+
 	reader := bufio.NewReader(conn)
 
 	for {

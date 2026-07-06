@@ -3,9 +3,15 @@ package resp
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
+)
+
+const (
+	maxArrayLen      = 1024
+	maxBulkStringLen = 512 * 1024 * 1024
 )
 
 // ParseCommand reads a RESP2 command from the reader.
@@ -33,7 +39,7 @@ func parseArray(reader *bufio.Reader) ([]string, error) {
 		return nil, errors.New("expected *")
 	}
 
-	size, err := parseLen(line)
+	size, err := parseLen(line, maxArrayLen)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +65,7 @@ func parseBulkString(reader *bufio.Reader) (string, error) {
 		return "", errors.New("expected $")
 	}
 
-	size, err := parseLen(line)
+	size, err := parseLen(line, maxBulkStringLen)
 	if err != nil {
 		return "", err
 	}
@@ -76,6 +82,16 @@ func parseBulkString(reader *bufio.Reader) (string, error) {
 	return string(buf), nil
 }
 
-func parseLen(line string) (int, error) {
-	return strconv.Atoi(strings.TrimRight(line[1:], "\r\n"))
+func parseLen(line string, max int) (int, error) {
+	n, err := strconv.Atoi(strings.TrimRight(line[1:], "\r\n"))
+	if err != nil {
+		return 0, err
+	}
+	if n < 0 {
+		return 0, fmt.Errorf("invalid length: %d", n)
+	}
+	if n > max {
+		return 0, fmt.Errorf("length %d exceeds max %d", n, max)
+	}
+	return n, nil
 }
