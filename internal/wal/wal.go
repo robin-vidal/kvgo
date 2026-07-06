@@ -131,6 +131,10 @@ func (wal *WAL) ShouldCompact() bool {
 	if wal.cfg.CompactionThreshold <= 0 {
 		return false
 	}
+
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
+
 	return wal.seqNum > 0 && wal.seqNum%uint64(wal.cfg.CompactionThreshold) == 0
 }
 
