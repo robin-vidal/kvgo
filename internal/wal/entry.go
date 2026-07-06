@@ -76,18 +76,7 @@ func (r *reader) bytes(n int) ([]byte, error) {
 	return b, nil
 }
 
-func Decode(b []byte) (Entry, error) {
-	if len(b) < checksumSize {
-		return Entry{}, errors.New("entry too short")
-	}
-
-	data := b[:len(b)-checksumSize]
-	storedChecksum := binary.BigEndian.Uint32(b[len(data):])
-
-	if crc32.ChecksumIEEE(data) != storedChecksum {
-		return Entry{}, errors.New("checksum mismatch")
-	}
-
+func decodeFields(data []byte) (Entry, error) {
 	r := &reader{data: data}
 
 	b, err := r.bytes(seqNumSize)
@@ -147,6 +136,21 @@ func Decode(b []byte) (Entry, error) {
 	return Entry{SeqNum: seqNum, Command: command, Key: key, Value: value}, nil
 }
 
+func Decode(b []byte) (Entry, error) {
+	if len(b) < checksumSize {
+		return Entry{}, errors.New("entry too short")
+	}
+
+	data := b[:len(b)-checksumSize]
+	storedChecksum := binary.BigEndian.Uint32(b[len(data):])
+
+	if crc32.ChecksumIEEE(data) != storedChecksum {
+		return Entry{}, errors.New("checksum mismatch")
+	}
+
+	return decodeFields(data)
+}
+
 func decodeOne(r *bufio.Reader) (Entry, int, error) {
 	var raw bytes.Buffer
 	tr := io.TeeReader(r, &raw)
@@ -157,7 +161,6 @@ func decodeOne(r *bufio.Reader) (Entry, int, error) {
 			if raw.Len() == 0 {
 				return nil, io.EOF
 			}
-
 			if err == io.EOF {
 				return nil, io.ErrUnexpectedEOF
 			}
@@ -166,58 +169,38 @@ func decodeOne(r *bufio.Reader) (Entry, int, error) {
 		return buf, nil
 	}
 
-	buf, err := readField(seqNumSize)
+	if _, err := readField(seqNumSize); err != nil {
+		return Entry{}, 0, err
+	}
+
+	b, err := readField(commandLenSize)
 	if err != nil {
 		return Entry{}, 0, err
 	}
-	seqNum := binary.BigEndian.Uint64(buf)
+	if _, err = readField(int(b[0])); err != nil {
+		return Entry{}, 0, err
+	}
 
-	buf, err = readField(commandLenSize)
+	b, err = readField(keyLenSize)
 	if err != nil {
 		return Entry{}, 0, err
 	}
-	commandLen := int(buf[0])
+	if _, err = readField(int(binary.BigEndian.Uint16(b))); err != nil {
+		return Entry{}, 0, err
+	}
 
-	buf, err = readField(commandLen)
+	b, err = readField(1)
 	if err != nil {
 		return Entry{}, 0, err
 	}
-	command := string(buf)
-
-	buf, err = readField(keyLenSize)
-	if err != nil {
-		return Entry{}, 0, err
-	}
-	keyLen := int(binary.BigEndian.Uint16(buf))
-
-	buf, err = readField(keyLen)
-	if err != nil {
-		return Entry{}, 0, err
-	}
-	key := string(buf)
-
-	buf, err = readField(1)
-	if err != nil {
-		return Entry{}, 0, err
-	}
-	present := int(buf[0])
-
-	var value *string
-	if present == 1 {
-		buf, err = readField(valueLenSize)
+	if b[0] == 1 {
+		b, err = readField(valueLenSize)
 		if err != nil {
 			return Entry{}, 0, err
 		}
-		valueLen := int(binary.BigEndian.Uint16(buf))
-
-		buf, err = readField(valueLen)
-		if err != nil {
+		if _, err = readField(int(binary.BigEndian.Uint16(b))); err != nil {
 			return Entry{}, 0, err
 		}
-		s := string(buf)
-		value = &s
-	} else if present != 0 {
-		return Entry{}, 0, errors.New("invalid present byte")
 	}
 
 	checksumBuf := make([]byte, checksumSize)
@@ -233,10 +216,10 @@ func decodeOne(r *bufio.Reader) (Entry, int, error) {
 		return Entry{}, 0, errors.New("checksum mismatch")
 	}
 
-	return Entry{
-		SeqNum:  seqNum,
-		Command: command,
-		Key:     key,
-		Value:   value,
-	}, raw.Len() + checksumSize, nil
+	entry, err := decodeFields(raw.Bytes())
+	if err != nil {
+		return Entry{}, 0, err
+	}
+
+	return entry, raw.Len() + checksumSize, nil
 }
