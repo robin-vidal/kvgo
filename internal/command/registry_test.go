@@ -9,12 +9,13 @@ import (
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/store"
 	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
 func ptr(s string) *string { return &s }
 
-func dummyHandler(db *database.Database, w *wal.WAL, args []string) result {
+func dummyHandler(s *store.Store, args []string) result {
 	return result{Response: resp.EncodeSimpleString("OK"), Status: "ok"}
 }
 
@@ -30,6 +31,18 @@ func generateSampleDB(t *testing.T) *database.Database {
 		t.Fatalf("New() error = %v", err)
 	}
 	return db
+}
+
+func generateSampleStore(t *testing.T, db *database.Database) *store.Store {
+	t.Helper()
+	w, err := wal.Open(&config.WalConfig{
+		WalPath: filepath.Join(t.TempDir(), "wal.log"),
+	})
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	t.Cleanup(func() { w.Close() })
+	return store.New(db, w)
 }
 
 func TestRegister(t *testing.T) {
@@ -259,16 +272,9 @@ func TestDispatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := generateSampleDB(t)
 			tt.setup(db)
+			st := generateSampleStore(t, db)
 
-			w, err := wal.Open(&config.WalConfig{
-				WalPath: filepath.Join(t.TempDir(), "wal.log"),
-			})
-			if err != nil {
-				t.Fatalf("Open() error = %v", err)
-			}
-			defer w.Close()
-
-			got := Dispatch(db, w, tt.cmd, tt.args)
+			got := Dispatch(st, tt.cmd, tt.args)
 
 			if tt.wantResp != nil && !bytes.Equal(got.Response, tt.wantResp) {
 				t.Errorf("Dispatch() Response = %q, want %q", got.Response, tt.wantResp)
@@ -355,8 +361,9 @@ func TestDispatch_WritesWAL(t *testing.T) {
 		t.Fatalf("Open() error = %v", err)
 	}
 	defer w.Close()
+	st := store.New(db, w)
 
-	Dispatch(db, w, "SET", []string{"foo", "bar"})
+	Dispatch(st, "SET", []string{"foo", "bar"})
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -371,8 +378,9 @@ func TestDispatch_WALFailureDoesNotModifyDB(t *testing.T) {
 	db := generateSampleDB(t)
 	w, _ := wal.Open(&config.WalConfig{WalPath: filepath.Join(t.TempDir(), "wal.log")})
 	w.Close()
+	st := store.New(db, w)
 
-	Dispatch(db, w, "SET", []string{"foo", "bar"})
+	Dispatch(st, "SET", []string{"foo", "bar"})
 
 	if _, ok := db.Get("foo"); ok {
 		t.Error("expected db to remain unmodified after WAL append failure")

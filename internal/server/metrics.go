@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/robin-vidal/kvgo/internal/database"
+	"github.com/robin-vidal/kvgo/internal/store"
 )
 
 type metrics struct {
@@ -20,7 +20,7 @@ type metrics struct {
 	heapAlloc         metric.Int64ObservableGauge
 }
 
-func newMetrics(db *database.Database) (*metrics, error) {
+func newMetrics(s *store.Store) (*metrics, error) {
 	meter := otel.Meter("kvgo/server")
 
 	commandsTotal, err := meter.Int64Counter(
@@ -55,7 +55,7 @@ func newMetrics(db *database.Database) (*metrics, error) {
 		metric.WithDescription("Number of keys per shard"),
 		metric.WithUnit("{key}"),
 		metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
-			for idx, amount := range db.GetKeyAmountPerShard() {
+			for idx, amount := range s.GetKeyAmountPerShard() {
 				o.Observe(int64(amount), metric.WithAttributes(attribute.Int("shard", idx)))
 			}
 			return nil

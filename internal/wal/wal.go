@@ -16,6 +16,7 @@ type WAL struct {
 	file    *os.File
 	cfg     *config.WalConfig
 	mu      sync.Mutex
+	applyMu sync.Mutex
 	seqNum  uint64
 	metrics *metrics
 }
@@ -142,4 +143,12 @@ func (wal *WAL) CurrentSeqNum() uint64 {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
 	return wal.seqNum
+}
+
+func (wal *WAL) LockApply() {
+	wal.applyMu.Lock()
+}
+
+func (wal *WAL) UnlockApply() {
+	wal.applyMu.Unlock()
 }

@@ -12,20 +12,19 @@ import (
 
 	"github.com/robin-vidal/kvgo/internal/command"
 	"github.com/robin-vidal/kvgo/internal/config"
-	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
-	"github.com/robin-vidal/kvgo/internal/wal"
+	"github.com/robin-vidal/kvgo/internal/store"
 )
 
 // executeCommand dispatches the command based on its name and run it.
-func executeCommand(db *database.Database, w *wal.WAL, m *metrics, cmd resp.Command) []byte {
-	res := command.Dispatch(db, w, cmd.Name, cmd.Args)
+func executeCommand(s *store.Store, m *metrics, cmd resp.Command) []byte {
+	res := command.Dispatch(s, cmd.Name, cmd.Args)
 	m.recordCommand(res.CmdName, res.Status)
 	return res.Response
 }
 
 // handleConnection manages a TCP connection, reading and executing commands in a loop.
-func handleConnection(conn net.Conn, db *database.Database, w *wal.WAL, m *metrics) {
+func handleConnection(conn net.Conn, s *store.Store, m *metrics) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			slog.Debug("failed to close connection", "error", err)
@@ -49,7 +48,7 @@ func handleConnection(conn net.Conn, db *database.Database, w *wal.WAL, m *metri
 		}
 
 		start := time.Now()
-		response := executeCommand(db, w, m, cmd)
+		response := executeCommand(s, m, cmd)
 		m.recordDuration(cmd.Name, float64(time.Since(start).Microseconds()))
 
 		slog.Debug("executed", "cmd", cmd, "response", response)
@@ -63,7 +62,7 @@ func handleConnection(conn net.Conn, db *database.Database, w *wal.WAL, m *metri
 }
 
 // Start launches a TCP server according to the configuration
-func Start(cfg *config.Config, db *database.Database, w *wal.WAL) error {
+func Start(cfg *config.Config, s *store.Store) error {
 	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
@@ -77,7 +76,7 @@ func Start(cfg *config.Config, db *database.Database, w *wal.WAL) error {
 
 	slog.Info("TCP server is listening", "addr", ln.Addr().String())
 
-	m, err := newMetrics(db)
+	m, err := newMetrics(s)
 	if err != nil {
 		return err
 	}
@@ -89,6 +88,6 @@ func Start(cfg *config.Config, db *database.Database, w *wal.WAL) error {
 			continue
 		}
 
-		go handleConnection(conn, db, w, m)
+		go handleConnection(conn, s, m)
 	}
 }

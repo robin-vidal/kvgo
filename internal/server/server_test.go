@@ -8,6 +8,7 @@ import (
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/store"
 	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
@@ -26,6 +27,16 @@ func TestExecuteCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
+
+	w, err := wal.Open(&config.WalConfig{
+		WalPath: filepath.Join(t.TempDir(), "wal.log"),
+	})
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer w.Close()
+
+	s := store.New(db, w)
 
 	tests := []struct {
 		name string
@@ -84,22 +95,14 @@ func TestExecuteCommand(t *testing.T) {
 		},
 	}
 
-	m, err := newMetrics(db)
+	m, err := newMetrics(s)
 	if err != nil {
 		t.Fatalf("newMetrics() error = %v", err)
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w, err := wal.Open(&config.WalConfig{
-				WalPath: filepath.Join(t.TempDir(), "wal.log"),
-			})
-			if err != nil {
-				t.Fatalf("Open() error = %v", err)
-			}
-			defer w.Close()
-
-			got := executeCommand(db, w, m, tt.cmd)
+			got := executeCommand(s, m, tt.cmd)
 			if !bytes.Equal(got, tt.want) {
 				t.Errorf("executeCommand() = %q, want %q", got, tt.want)
 			}
