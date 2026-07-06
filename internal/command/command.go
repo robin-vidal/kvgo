@@ -1,9 +1,8 @@
 package command
 
 import (
-	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
-	"github.com/robin-vidal/kvgo/internal/wal"
+	"github.com/robin-vidal/kvgo/internal/store"
 )
 
 func init() {
@@ -11,7 +10,7 @@ func init() {
 		name:    "COMMAND",
 		summary: "List available commands.",
 		arity:   0,
-		handler: func(db *database.Database, w *wal.WAL, args []string) result {
+		handler: func(s *store.Store, args []string) result {
 			elems := [][]byte{}
 			for name, e := range defaultRegistry.commands {
 				elems = append(elems, encodeCommandInfo(name, e.spec))
@@ -28,7 +27,7 @@ func init() {
 		parent:  "COMMAND",
 		summary: "Return documentation for commands.",
 		arity:   0,
-		handler: func(db *database.Database, w *wal.WAL, args []string) result {
+		handler: func(s *store.Store, args []string) result {
 			elems := [][]byte{}
 			for name, e := range defaultRegistry.commands {
 				elems = append(elems, resp.EncodeBulkString(name))
@@ -47,7 +46,7 @@ func init() {
 		parent:  "COMMAND",
 		summary: "Return the number of registered commands.",
 		arity:   0,
-		handler: func(db *database.Database, w *wal.WAL, args []string) result {
+		handler: func(s *store.Store, args []string) result {
 			return result{Response: resp.EncodeInteger(defaultRegistry.count()), Status: "ok"}
 		},
 	})

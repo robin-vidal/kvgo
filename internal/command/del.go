@@ -1,10 +1,9 @@
 package command
 
 import (
-	"log/slog"
-
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/store"
 	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
@@ -16,25 +15,10 @@ func init() {
 		args: []arg{
 			{name: "key", kind: "key"},
 		},
-		handler: func(db *database.Database, w *wal.WAL, args []string) result {
-			entry := wal.Entry{
-				Command: "DEL",
-				Key:     args[0],
-			}
-
-			err := w.Append(entry)
-			if err != nil {
+		handler: func(s *store.Store, args []string) result {
+			if err := s.Delete(args[0]); err != nil {
 				return result{Response: resp.EncodeError(err.Error()), Status: "err"}
 			}
-
-			db.Delete(args[0])
-
-			if w.ShouldCompact() {
-				if err := maybeCompact(db, w); err != nil {
-					slog.Error("compaction failed", "error", err)
-				}
-			}
-
 			return result{Response: resp.EncodeInteger(1), Status: "ok"}
 		},
 		apply: func(db *database.Database, e wal.Entry) error {

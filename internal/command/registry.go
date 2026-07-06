@@ -5,6 +5,7 @@ import (
 
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
+	"github.com/robin-vidal/kvgo/internal/store"
 	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
@@ -55,7 +56,7 @@ func (r *registry) register(s *spec) {
 	}
 }
 
-func Dispatch(db *database.Database, w *wal.WAL, name string, args []string) result {
+func Dispatch(st *store.Store, name string, args []string) result {
 	entry, found := defaultRegistry.commands[name]
 	if !found {
 		return result{
@@ -65,12 +66,12 @@ func Dispatch(db *database.Database, w *wal.WAL, name string, args []string) res
 		}
 	}
 
-	s := entry.spec
+	spec := entry.spec
 	if len(entry.subs) > 0 && len(args) > 0 {
 		if subS, found := entry.subs[args[0]]; found {
-			s = subS
+			spec = subS
 			args = args[1:]
-			name = name + " " + s.name
+			name = name + " " + spec.name
 		} else {
 			return result{
 				Response: resp.EncodeError("unknown subcommand " + args[0]),
@@ -80,15 +81,15 @@ func Dispatch(db *database.Database, w *wal.WAL, name string, args []string) res
 		}
 	}
 
-	if s.arity != len(args) && s.arity != -1 {
+	if spec.arity != len(args) && spec.arity != -1 {
 		return result{
-			Response: resp.EncodeError("wrong number of arguments for '" + s.name + "'"),
+			Response: resp.EncodeError("wrong number of arguments for '" + spec.name + "'"),
 			CmdName:  name,
 			Status:   "err",
 		}
 	}
 
-	res := s.handler(db, w, args)
+	res := spec.handler(st, args)
 	res.CmdName = name
 	return res
 }

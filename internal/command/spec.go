@@ -2,6 +2,7 @@ package command
 
 import (
 	"github.com/robin-vidal/kvgo/internal/database"
+	"github.com/robin-vidal/kvgo/internal/store"
 	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
@@ -23,6 +24,6 @@ type spec struct {
 	summary string
 	arity   int
 	args    []arg
-	handler func(db *database.Database, w *wal.WAL, args []string) result
+	handler func(s *store.Store, args []string) result
 	apply   func(db *database.Database, e wal.Entry) error
 }

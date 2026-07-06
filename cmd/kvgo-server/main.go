@@ -14,6 +14,7 @@ import (
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/logger"
 	"github.com/robin-vidal/kvgo/internal/server"
+	"github.com/robin-vidal/kvgo/internal/store"
 	"github.com/robin-vidal/kvgo/internal/telemetry"
 	"github.com/robin-vidal/kvgo/internal/wal"
 )
@@ -68,7 +69,9 @@ func main() {
 		}
 	}
 
-	err = server.Start(cfg, db, w)
+	s := store.New(db, w)
+
+	err = server.Start(cfg, s)
 	if err != nil {
 		slog.Error("server stopped unexpectedly", "error", err)
 		os.Exit(1)
