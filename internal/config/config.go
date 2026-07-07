@@ -45,10 +45,6 @@ func Parse(args []string) (*Config, error) {
 
 	raftCfg := &RaftConfig{}
 	raftCfg.Parse(fs)
-	err := raftCfg.PostParse()
-	if err != nil {
-		return nil, err
-	}
 
 	cfg.RaftConfig = raftCfg
 
@@ -57,12 +53,17 @@ func Parse(args []string) (*Config, error) {
 		fs.PrintDefaults()
 	}
 
-	err = fs.Parse(args)
+	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
 	}
 
 	err = validateShardAmount(cfg.ShardAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	err = raftCfg.PostParse()
 	if err != nil {
 		return nil, err
 	}

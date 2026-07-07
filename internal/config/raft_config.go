@@ -8,7 +8,7 @@ import (
 )
 
 type RaftConfig struct {
-	NodeId   string
+	NodeID   string
 	Peers    []string
 	peersRaw string
 
@@ -20,7 +20,7 @@ type RaftConfig struct {
 }
 
 func (cfg *RaftConfig) Parse(fs *flag.FlagSet) {
-	fs.StringVar(&cfg.NodeId, "nodeId", "", "Unique ID of this Raft node")
+	fs.StringVar(&cfg.NodeID, "nodeID", "", "Unique ID of this Raft node")
 	fs.StringVar(&cfg.peersRaw, "peers", "", "Comma-separated list of peer addresses (e.g. node1:6379,node2:6379)")
 
 	fs.DurationVar(&cfg.ElectionTimeoutMin, "electionTimeoutMin", 150*time.Millisecond, "Minimum election timeout")
@@ -41,11 +41,8 @@ func (cfg *RaftConfig) PostParse() error {
 }
 
 func (cfg *RaftConfig) validate() error {
-	if cfg.NodeId == "" {
-		return errors.New("config: nodeId is required")
-	}
-	if len(cfg.Peers) == 0 {
-		return errors.New("config: at least one peer is required")
+	if cfg.NodeID == "" {
+		return errors.New("config: nodeID is required")
 	}
 	if cfg.ElectionTimeoutMin >= cfg.ElectionTimeoutMax {
 		return errors.New("config: electionTimeoutMin must be strictly less than electionTimeoutMax")
