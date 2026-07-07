@@ -16,6 +16,7 @@ type Config struct {
 	Debug       bool
 	ShardAmount int
 	WalConfig   *WalConfig
+	RaftConfig  *RaftConfig
 }
 
 func validateShardAmount(shardAmount int) error {
@@ -39,8 +40,11 @@ func Parse(args []string) (*Config, error) {
 
 	walCfg := &WalConfig{}
 	walCfg.Parse(fs)
-
 	cfg.WalConfig = walCfg
+
+	raftCfg := &RaftConfig{}
+	raftCfg.Parse(fs)
+	cfg.RaftConfig = raftCfg
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of kvgo:\n")
