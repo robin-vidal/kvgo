@@ -1,7 +1,9 @@
 package config
 
 import (
+	"errors"
 	"flag"
+	"strings"
 	"time"
 )
 
@@ -26,4 +28,27 @@ func (cfg *RaftConfig) Parse(fs *flag.FlagSet) {
 	fs.DurationVar(&cfg.HeartbeatInterval, "heartbeatInterval", 50*time.Millisecond, "Leader heartbeat interval")
 
 	fs.StringVar(&cfg.RaftStatePath, "raftStatePath", "/var/lib/kvgo/raft.state", "Path to the Raft persistent state file")
+}
+
+func (cfg *RaftConfig) PostParse() error {
+	if cfg.peersRaw != "" {
+		cfg.Peers = strings.Split(cfg.peersRaw, ",")
+		for i := range cfg.Peers {
+			cfg.Peers[i] = strings.TrimSpace(cfg.Peers[i])
+		}
+	}
+	return cfg.validate()
+}
+
+func (cfg *RaftConfig) validate() error {
+	if cfg.NodeId == "" {
+		return errors.New("config: nodeId is required")
+	}
+	if len(cfg.Peers) == 0 {
+		return errors.New("config: at least one peer is required")
+	}
+	if cfg.ElectionTimeoutMin >= cfg.ElectionTimeoutMax {
+		return errors.New("config: electionTimeoutMin must be strictly less than electionTimeoutMax")
+	}
+	return nil
 }

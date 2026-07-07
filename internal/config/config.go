@@ -40,10 +40,16 @@ func Parse(args []string) (*Config, error) {
 
 	walCfg := &WalConfig{}
 	walCfg.Parse(fs)
+
 	cfg.WalConfig = walCfg
 
 	raftCfg := &RaftConfig{}
 	raftCfg.Parse(fs)
+	err := raftCfg.PostParse()
+	if err != nil {
+		return nil, err
+	}
+
 	cfg.RaftConfig = raftCfg
 
 	fs.Usage = func() {
@@ -51,7 +57,7 @@ func Parse(args []string) (*Config, error) {
 		fs.PrintDefaults()
 	}
 
-	err := fs.Parse(args)
+	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
 	}
