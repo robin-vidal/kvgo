@@ -75,3 +75,28 @@ func (s *State) persist() error {
 	defer dir.Close()
 	return dir.Sync()
 }
+
+func (s *State) SetTermAndVote(term uint64, votedFor string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.CurrentTerm = term
+	s.VotedFor = votedFor
+	return s.persist()
+}
+
+func (s *State) SetTerm(term uint64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.CurrentTerm = term
+	return s.persist()
+}
+
+func (s *State) SetVote(votedFor string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.VotedFor = votedFor
+	return s.persist()
+}
