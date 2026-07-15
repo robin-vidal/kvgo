@@ -203,6 +203,26 @@ func TestDispatch(t *testing.T) {
 			wantStatus:  "ok",
 		},
 		{
+			name:        "lowercase SET",
+			setup:       func(db *database.Database) {},
+			cmd:         "set",
+			args:        []string{"foo", "bar"},
+			wantResp:    resp.EncodeSimpleString("OK"),
+			wantCmdName: "SET",
+			wantStatus:  "ok",
+		},
+		{
+			name: "mixed-case GET",
+			setup: func(db *database.Database) {
+				db.Set("foo", "bar")
+			},
+			cmd:         "gEt",
+			args:        []string{"foo"},
+			wantResp:    resp.EncodeBulkString("bar"),
+			wantCmdName: "GET",
+			wantStatus:  "ok",
+		},
+		{
 			name: "GET Hit",
 			setup: func(db *database.Database) {
 				db.Set("foo", "bar")
