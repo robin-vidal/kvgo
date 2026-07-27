@@ -13,6 +13,7 @@ import (
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/logger"
+	"github.com/robin-vidal/kvgo/internal/raft"
 	"github.com/robin-vidal/kvgo/internal/server"
 	"github.com/robin-vidal/kvgo/internal/store"
 	"github.com/robin-vidal/kvgo/internal/telemetry"
@@ -71,7 +72,13 @@ func main() {
 
 	s := store.New(db, w)
 
-	err = server.Start(cfg, s)
+	raftNode, err := raft.NewNode(cfg.RaftConfig)
+	if err != nil {
+		slog.Error("failed to initialize raft node", "error", err)
+		os.Exit(1)
+	}
+
+	err = server.Start(cfg, s, raftNode)
 	if err != nil {
 		slog.Error("server stopped unexpectedly", "error", err)
 		os.Exit(1)

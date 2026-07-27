@@ -12,6 +12,7 @@ import (
 
 	"github.com/robin-vidal/kvgo/internal/command"
 	"github.com/robin-vidal/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/raft"
 	"github.com/robin-vidal/kvgo/internal/resp"
 	"github.com/robin-vidal/kvgo/internal/store"
 )
@@ -68,7 +69,7 @@ func handleConnection(conn net.Conn, s *store.Store, m *metrics) {
 }
 
 // Start launches a TCP server according to the configuration
-func Start(cfg *config.Config, s *store.Store) error {
+func Start(cfg *config.Config, s *store.Store, raftNode *raft.Node) error {
 	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
