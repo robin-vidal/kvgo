@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/robin-vidal/kvgo/internal/database"
 	"github.com/robin-vidal/kvgo/internal/resp"
@@ -57,6 +58,7 @@ func (r *registry) register(s *spec) {
 }
 
 func Dispatch(st *store.Store, name string, args []string) result {
+	name = strings.ToUpper(name)
 	entry, found := defaultRegistry.commands[name]
 	if !found {
 		return result{
