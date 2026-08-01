@@ -37,6 +37,12 @@ func TestNewNode(t *testing.T) {
 			if !tt.wantErr && node == nil {
 				t.Error("NewNode() returned nil node")
 			}
+			if node.role != Follower {
+				t.Errorf("role = %v, want Follower", node.role)
+			}
+			if cap(node.resetElection) != 1 {
+				t.Errorf("resetElection cap = %d, want 1", cap(node.resetElection))
+			}
 		})
 	}
 }

@@ -2,13 +2,28 @@ package raft
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 )
 
+type Role int
+
+const (
+	Follower Role = iota
+	Candidate
+	Leader
+)
+
 type Node struct {
-	state *State
-	cfg   *config.RaftConfig
+	state         *State
+	cfg           *config.RaftConfig
+	resetElection chan struct{}
+
+	mu       sync.Mutex
+	role     Role
+	leaderID string
+	votes    int
 }
 
 func NewNode(cfg *config.RaftConfig) (*Node, error) {
@@ -18,7 +33,9 @@ func NewNode(cfg *config.RaftConfig) (*Node, error) {
 	}
 
 	return &Node{
-		state: state,
-		cfg:   cfg,
+		role:          Follower,
+		resetElection: make(chan struct{}, 1),
+		state:         state,
+		cfg:           cfg,
 	}, nil
 }
