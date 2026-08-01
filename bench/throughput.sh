@@ -30,7 +30,7 @@ hardware_info() {
         echo "cores:   $(sysctl -n hw.logicalcpu)"
         echo "ram:     $(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 ))GB"
     else
-        echo "cpu:     $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)"
+        echo "cpu:     $(grep -m1 'model name\|Hardware\|CPU part' /proc/cpuinfo | cut -d: -f2 | xargs || echo 'arm64')"
         echo "cores:   $(nproc)"
         echo "ram:     $(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / 1024 / 1024 ))GB"
     fi

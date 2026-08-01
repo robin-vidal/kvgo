@@ -1,10 +1,10 @@
-date:    2026-08-01T17:46:18Z
-os:      Darwin 25.5.0
-cpu:     Apple M5
+date:    2026-08-01T18:04:23Z
+os:      Linux 7.0.11-orbstack-00360-gc9bc4d96ac70
+cpu:     0x000
 cores:   10
-ram:     24GB
+ram:     11GB
 shards:  10
 params:  requests=1000000 clients=50 keyspace=1000000
 ---
 "clients","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms"
-"50","142267.75","0.233","0.008","0.191","0.487","0.807","38.399"
+"50","204123.28","0.161","0.000","0.127","0.327","0.911","35.775"
