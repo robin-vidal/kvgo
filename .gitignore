@@ -11,3 +11,8 @@ __debug*
 
 # editor
 .zed/
+
+# generated files
+*.state
+*.log
+*.db
