@@ -135,7 +135,11 @@ func (wal *WAL) Compact(data map[string]string, snapshotSeqNum uint64) (err erro
 }
 
 func (wal *WAL) LoadSnapshot() (map[string]string, error) {
-	f, err := os.Open(wal.cfg.SnapshotPath)
+	return ReadSnapshot(wal.cfg.SnapshotPath)
+}
+
+func ReadSnapshot(path string) (map[string]string, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

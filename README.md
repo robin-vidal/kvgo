@@ -37,6 +37,14 @@ On startup, kvgo loads the latest snapshot (if any) and replays the WAL to rebui
 
 Periodically (configurable threshold), the in-memory state is snapshotted to disk (`encoding/gob`) and the WAL is compacted, keeping recovery fast even after millions of operations.
 
+## Tools
+
+`waldump` inspects on-disk persistence for durability and compaction debugging. Pass either or both paths; each is skipped when omitted.
+
+```bash
+go run ./cmd/waldump --snapshotPath=/var/lib/kvgo/snapshot.db --walPath=/var/lib/kvgo/wal.log
+```
+
 ## Commands
 
 | Command | Description |
