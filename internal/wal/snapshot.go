@@ -5,8 +5,10 @@ import (
 	"encoding/gob"
 	"io"
 	"os"
-	"time"
 	"path/filepath"
+	"time"
+
+	"github.com/robin-vidal/kvgo/internal/fsutil"
 )
 
 func (wal *WAL) Snapshot(data map[string]string) error {
@@ -34,7 +36,11 @@ func (wal *WAL) Snapshot(data map[string]string) error {
 		return err
 	}
 
-	return os.Rename(tmpPath, wal.cfg.SnapshotPath)
+	if err := os.Rename(tmpPath, wal.cfg.SnapshotPath); err != nil {
+		return err
+	}
+
+	return fsutil.SyncDir(filepath.Dir(wal.cfg.SnapshotPath))
 }
 
 func (wal *WAL) truncate(snapshotSeqNum uint64) error {
@@ -100,6 +106,9 @@ func (wal *WAL) truncate(snapshotSeqNum uint64) error {
 		return err
 	}
 	if err := os.Rename(tmpPath, wal.cfg.WalPath); err != nil {
+		return err
+	}
+	if err := fsutil.SyncDir(filepath.Dir(wal.cfg.WalPath)); err != nil {
 		return err
 	}
 

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/robin-vidal/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/fsutil"
 )
 
 type State struct {
@@ -68,12 +69,7 @@ func (s *State) persist() error {
 		return err
 	}
 
-	dir, err := os.Open(filepath.Dir(s.path))
-	if err != nil {
-		return err
-	}
-	defer dir.Close()
-	return dir.Sync()
+	return fsutil.SyncDir(filepath.Dir(s.path))
 }
 
 func (s *State) SetTermAndVote(term uint64, votedFor string) error {
