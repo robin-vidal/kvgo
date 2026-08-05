@@ -30,7 +30,7 @@ func TestNewNode(t *testing.T) {
 			path := filepath.Join(t.TempDir(), tt.path)
 			cfg := &config.RaftConfig{RaftStatePath: path}
 
-			node, err := NewNode(cfg)
+			node, err := NewNode(cfg, nil)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("NewNode() error = %v, wantErr %v", err, tt.wantErr)
 			}

@@ -72,7 +72,7 @@ func main() {
 
 	s := store.New(db, w)
 
-	raftNode, err := raft.NewNode(cfg.RaftConfig)
+	raftNode, err := raft.NewNode(cfg.RaftConfig, w)
 	if err != nil {
 		slog.Error("failed to initialize raft node", "error", err)
 		os.Exit(1)

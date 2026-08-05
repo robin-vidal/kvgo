@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/robin-vidal/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/wal"
 )
 
 type Role int
@@ -19,6 +20,7 @@ type Node struct {
 	state         *State
 	cfg           *config.RaftConfig
 	resetElection chan struct{}
+	wal           *wal.WAL
 
 	mu       sync.Mutex
 	role     Role
@@ -26,7 +28,7 @@ type Node struct {
 	votes    int
 }
 
-func NewNode(cfg *config.RaftConfig) (*Node, error) {
+func NewNode(cfg *config.RaftConfig, wal *wal.WAL) (*Node, error) {
 	state, err := LoadState(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("raft: failed to load persistent state: %w", err)
@@ -37,5 +39,6 @@ func NewNode(cfg *config.RaftConfig) (*Node, error) {
 		resetElection: make(chan struct{}, 1),
 		state:         state,
 		cfg:           cfg,
+		wal:           wal,
 	}, nil
 }
