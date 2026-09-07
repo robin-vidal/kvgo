@@ -14,6 +14,7 @@ const (
 	keyMaxLen      int = 65535
 	valueMaxLen    int = 65535
 	seqNumSize     int = 8 // uint64
+	termSize       int = 8 // uint64
 	commandLenSize int = 1 // uint8
 	keyLenSize     int = 2
 	valueLenSize   int = 2
@@ -22,6 +23,7 @@ const (
 
 type Entry struct {
 	SeqNum  uint64
+	Term    uint64
 	Command string
 	Key     string
 	Value   *string
@@ -41,6 +43,7 @@ func Encode(e Entry) ([]byte, error) {
 	var buf bytes.Buffer
 
 	binary.Write(&buf, binary.BigEndian, e.SeqNum)
+	binary.Write(&buf, binary.BigEndian, e.Term)
 
 	buf.WriteByte(byte(len(e.Command)))
 	buf.WriteString(e.Command)
@@ -84,6 +87,12 @@ func decodeFields(data []byte) (Entry, error) {
 		return Entry{}, err
 	}
 	seqNum := binary.BigEndian.Uint64(b)
+
+	b, err = r.bytes(termSize)
+	if err != nil {
+		return Entry{}, err
+	}
+	term := binary.BigEndian.Uint64(b)
 
 	b, err = r.bytes(commandLenSize)
 	if err != nil {
@@ -133,7 +142,7 @@ func decodeFields(data []byte) (Entry, error) {
 		return Entry{}, errors.New("invalid present byte")
 	}
 
-	return Entry{SeqNum: seqNum, Command: command, Key: key, Value: value}, nil
+	return Entry{SeqNum: seqNum, Term: term, Command: command, Key: key, Value: value}, nil
 }
 
 func Decode(b []byte) (Entry, error) {
@@ -170,6 +179,10 @@ func decodeOne(r *bufio.Reader) (Entry, int, error) {
 	}
 
 	if _, err := readField(seqNumSize); err != nil {
+		return Entry{}, 0, err
+	}
+
+	if _, err := readField(termSize); err != nil {
 		return Entry{}, 0, err
 	}
 

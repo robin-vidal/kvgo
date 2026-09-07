@@ -11,7 +11,7 @@ import (
 )
 
 type State struct {
-	mu   sync.Mutex
+	mu   sync.RWMutex
 	path string
 
 	CurrentTerm uint64 `json:"current_term"`

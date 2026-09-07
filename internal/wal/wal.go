@@ -15,16 +15,19 @@ import (
 type WAL struct {
 	file    *os.File
 	cfg     *config.WalConfig
-	mu      sync.Mutex
-	applyMu sync.Mutex
-	seqNum  uint64
 	metrics *metrics
+	applyMu sync.Mutex
+
+	mu     sync.Mutex
+	seqNum uint64
+	term   uint64
 }
 
 type Wal interface {
 	Append(e Entry) error
 	Close() error
 	Replay() ([]Entry, error)
+	GetTerm() uint64
 }
 
 func Open(cfg *config.WalConfig) (*WAL, error) {
@@ -67,6 +70,8 @@ func (wal *WAL) Append(e Entry) (err error) {
 
 	wal.seqNum++
 	e.SeqNum = wal.seqNum
+
+	wal.term = e.Term
 
 	encoded, err := Encode(e)
 	if err != nil {
@@ -123,6 +128,7 @@ func (wal *WAL) Replay() (entries []Entry, err error) {
 
 	if len(entries) > 0 {
 		wal.seqNum = entries[len(entries)-1].SeqNum
+		wal.term = entries[len(entries)-1].Term
 	}
 
 	return entries, nil
@@ -151,4 +157,11 @@ func (wal *WAL) LockApply() {
 
 func (wal *WAL) UnlockApply() {
 	wal.applyMu.Unlock()
+}
+
+func (wal *WAL) GetTerm() uint64 {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
+
+	return wal.term
 }
