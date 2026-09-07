@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/robin-vidal/kvgo/actions/workflows/ci.yml/badge.svg)](https://github.com/robin-vidal/kvgo/actions/workflows/ci.yml)
 
-Sharded in-memory key-value store in Go. Custom TCP server, per-shard `RWMutex` locking, RESP2 protocol, write-ahead log for durability, Prometheus/Grafana observability.
+Sharded in-memory key-value store in Go. Custom TCP server, per-shard mutex locking, RESP2 protocol, write-ahead log for durability, Prometheus/Grafana observability.
 
 ## Architecture
 
