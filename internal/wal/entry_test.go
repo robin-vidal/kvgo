@@ -26,6 +26,7 @@ func TestEncodeDecode(t *testing.T) {
 			name: "simple set",
 			entry: Entry{
 				SeqNum:  1,
+				Term:    3,
 				Command: "SET",
 				Key:     "foo",
 				Value:   ptr("bar"),
@@ -90,6 +91,9 @@ func TestEncodeDecode(t *testing.T) {
 			}
 			if decoded.SeqNum != tt.entry.SeqNum {
 				t.Errorf("SeqNum = %d, want %d", decoded.SeqNum, tt.entry.SeqNum)
+			}
+			if decoded.Term != tt.entry.Term {
+				t.Errorf("Term = %d, want %d", decoded.Term, tt.entry.Term)
 			}
 			if decoded.Command != tt.entry.Command {
 				t.Errorf("Command = %q, want %q", decoded.Command, tt.entry.Command)

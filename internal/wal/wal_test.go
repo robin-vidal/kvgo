@@ -235,6 +235,33 @@ func TestReplay_TruncatesCorruptedTrailingEntry(t *testing.T) {
 	}
 }
 
+func TestGetTerm(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "wal.log")
+	w, _ := Open(&config.WalConfig{WalPath: path})
+
+	if w.GetTerm() != 0 {
+		t.Errorf("GetTerm() = %d, want 0 on fresh WAL", w.GetTerm())
+	}
+
+	w.Append(Entry{Term: 2, Command: "SET", Key: "a", Value: ptr("1")})
+	w.Append(Entry{Term: 5, Command: "SET", Key: "b", Value: ptr("2")})
+
+	if w.GetTerm() != 5 {
+		t.Errorf("GetTerm() = %d, want 5 after appends", w.GetTerm())
+	}
+	w.Close()
+
+	w2, _ := Open(&config.WalConfig{WalPath: path})
+	defer w2.Close()
+
+	if _, err := w2.Replay(); err != nil {
+		t.Fatalf("Replay() error = %v", err)
+	}
+	if w2.GetTerm() != 5 {
+		t.Errorf("GetTerm() = %d, want 5 after replay", w2.GetTerm())
+	}
+}
+
 func TestReplay_SeqNumContinuesAfterRestart(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wal.log")
 	w, _ := Open(&config.WalConfig{WalPath: path})
