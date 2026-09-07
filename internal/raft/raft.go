@@ -22,7 +22,7 @@ type Node struct {
 	resetElection chan struct{}
 	wal           *wal.WAL
 
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	role     Role
 	leaderID string
 	votes    int
@@ -41,4 +41,44 @@ func NewNode(cfg *config.RaftConfig, wal *wal.WAL) (*Node, error) {
 		cfg:           cfg,
 		wal:           wal,
 	}, nil
+}
+
+func (n *Node) CurrentTerm() uint64 {
+	n.state.mu.RLock()
+	defer n.state.mu.RUnlock()
+
+	return n.state.CurrentTerm
+}
+
+func (n *Node) Role() Role {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
+	return n.role
+}
+
+func (n *Node) becomeFollower(term uint64) {
+	n.mu.Lock()
+	n.role = Follower
+	n.mu.Unlock()
+
+	newTerm := max(term, n.CurrentTerm())
+	n.state.SetTermAndVote(newTerm, "")
+}
+
+func (n *Node) becomeCandidate() {
+	n.state.SetTermAndVote(n.CurrentTerm()+1, n.cfg.NodeID)
+
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.role = Candidate
+	n.votes = 1
+}
+
+func (n *Node) becomeLeader() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	n.role = Leader
+	n.leaderID = n.cfg.NodeID
 }
