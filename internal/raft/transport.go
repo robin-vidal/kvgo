@@ -12,10 +12,10 @@ type grpcTransport struct {
 }
 
 func (t *grpcTransport) RequestVote(ctx context.Context, req *raftpb.RequestVoteRequest) (*raftpb.RequestVoteResponse, error) {
-	t.node.state.mu.Lock()
+	t.node.state.mu.RLock()
 	currentTerm := t.node.state.CurrentTerm
 	votedFor := t.node.state.VotedFor
-	t.node.state.mu.Unlock()
+	t.node.state.mu.RUnlock()
 
 	if req.Term < currentTerm {
 		return &raftpb.RequestVoteResponse{
