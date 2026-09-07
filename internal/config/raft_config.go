@@ -9,6 +9,8 @@ import (
 
 type RaftConfig struct {
 	NodeID   string
+	Host     string
+	Port     int
 	Peers    []string
 	peersRaw string
 
@@ -22,6 +24,8 @@ type RaftConfig struct {
 func (cfg *RaftConfig) Parse(fs *flag.FlagSet) {
 	fs.StringVar(&cfg.NodeID, "nodeID", "", "Unique ID of this Raft node")
 	fs.StringVar(&cfg.peersRaw, "peers", "", "Comma-separated list of peer addresses (e.g. node1:6379,node2:6379)")
+	fs.StringVar(&cfg.Host, "raftHost", "0.0.0.0", "Host for Raft peer communication")
+	fs.IntVar(&cfg.Port, "raftPort", 6380, "Port for Raft peer communication")
 
 	fs.DurationVar(&cfg.ElectionTimeoutMin, "electionTimeoutMin", 150*time.Millisecond, "Minimum election timeout")
 	fs.DurationVar(&cfg.ElectionTimeoutMax, "electionTimeoutMax", 300*time.Millisecond, "Maximum election timeout")

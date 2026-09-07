@@ -2,10 +2,14 @@ package raft
 
 import (
 	"fmt"
+	"log/slog"
+	"net"
 	"sync"
 
 	"github.com/robin-vidal/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/raft/raftpb"
 	"github.com/robin-vidal/kvgo/internal/wal"
+	"google.golang.org/grpc"
 )
 
 type Role int
@@ -21,6 +25,7 @@ type Node struct {
 	cfg           *config.RaftConfig
 	resetElection chan struct{}
 	wal           *wal.WAL
+	grpcServer    *grpc.Server
 
 	mu       sync.RWMutex
 	role     Role
@@ -41,6 +46,27 @@ func NewNode(cfg *config.RaftConfig, wal *wal.WAL) (*Node, error) {
 		cfg:           cfg,
 		wal:           wal,
 	}, nil
+}
+
+func (n *Node) Start() error {
+	address := fmt.Sprintf("%s:%d", n.cfg.Host, n.cfg.Port)
+	ln, err := net.Listen("tcp", address)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("raft gRPC server is listening", "addr", ln.Addr().String())
+
+	n.grpcServer = grpc.NewServer()
+	raftpb.RegisterRaftServiceServer(n.grpcServer, &grpcTransport{node: n})
+	go n.grpcServer.Serve(ln)
+	return nil
+}
+
+func (n *Node) Stop() {
+	if n.grpcServer != nil {
+		n.grpcServer.GracefulStop()
+	}
 }
 
 func (n *Node) CurrentTerm() uint64 {
