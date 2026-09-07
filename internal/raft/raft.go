@@ -50,7 +50,7 @@ func (n *Node) CurrentTerm() uint64 {
 	return n.state.CurrentTerm
 }
 
-func (n *Node) Role() Role {
+func (n *Node) State() Role {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
