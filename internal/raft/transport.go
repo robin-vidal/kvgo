@@ -27,7 +27,7 @@ func (t *grpcTransport) RequestVote(ctx context.Context, req *raftpb.RequestVote
 	if req.Term > currentTerm {
 		currentTerm = req.Term
 		votedFor = ""
-		t.node.state.SetTermAndVote(req.Term, votedFor)
+		t.node.becomeFollower(req.Term)
 	}
 
 	if votedFor != "" && votedFor != req.CandidateId {
@@ -52,6 +52,7 @@ func (t *grpcTransport) RequestVote(ctx context.Context, req *raftpb.RequestVote
 	t.node.role = Follower
 	t.node.mu.Unlock()
 
+	// TODO: emit n.resetElection #74
 	return &raftpb.RequestVoteResponse{
 		Term:        req.Term,
 		VoteGranted: true,
