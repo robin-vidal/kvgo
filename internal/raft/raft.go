@@ -71,6 +71,10 @@ func (n *Node) Stop() {
 	if n.grpcServer != nil {
 		n.grpcServer.GracefulStop()
 	}
+
+	for _, conn := range n.conns {
+		conn.Close()
+	}
 }
 
 func (n *Node) dialPeers() error {
