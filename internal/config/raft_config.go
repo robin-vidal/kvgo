@@ -14,6 +14,7 @@ type RaftConfig struct {
 	Peers    []string
 	peersRaw string
 
+	RPCTimeout         time.Duration
 	ElectionTimeoutMin time.Duration
 	ElectionTimeoutMax time.Duration
 	HeartbeatInterval  time.Duration
@@ -27,6 +28,7 @@ func (cfg *RaftConfig) Parse(fs *flag.FlagSet) {
 	fs.StringVar(&cfg.Host, "raftHost", "0.0.0.0", "Host for Raft peer communication")
 	fs.IntVar(&cfg.Port, "raftPort", 6380, "Port for Raft peer communication")
 
+	fs.DurationVar(&cfg.RPCTimeout, "rpcTimeout", 50*time.Millisecond, "RPC connection timeout ")
 	fs.DurationVar(&cfg.ElectionTimeoutMin, "electionTimeoutMin", 150*time.Millisecond, "Minimum election timeout")
 	fs.DurationVar(&cfg.ElectionTimeoutMax, "electionTimeoutMax", 300*time.Millisecond, "Maximum election timeout")
 	fs.DurationVar(&cfg.HeartbeatInterval, "heartbeatInterval", 50*time.Millisecond, "Leader heartbeat interval")

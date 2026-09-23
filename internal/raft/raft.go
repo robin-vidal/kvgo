@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -133,7 +134,17 @@ func (n *Node) becomeLeader() {
 }
 
 func (n *Node) sendRequestVote(peer string, req *raftpb.RequestVoteRequest) (*raftpb.RequestVoteResponse, error) {
-	return nil, nil
+
+	p, found := n.peers[peer]
+	if !found {
+		return nil, fmt.Errorf("raft: peer %q not found", peer)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), n.cfg.RPCTimeout)
+	defer cancel()
+
+	resp, err := p.RequestVote(ctx, req)
+	return resp, err
 }
 
 func (n *Node) sendAppendEntries(peer string, req *raftpb.AppendEntriesRequest) (*raftpb.AppendEntriesResponse, error) {
