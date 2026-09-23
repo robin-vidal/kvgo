@@ -134,7 +134,6 @@ func (n *Node) becomeLeader() {
 }
 
 func (n *Node) sendRequestVote(peer string, req *raftpb.RequestVoteRequest) (*raftpb.RequestVoteResponse, error) {
-
 	p, found := n.peers[peer]
 	if !found {
 		return nil, fmt.Errorf("raft: peer %q not found", peer)
@@ -148,5 +147,14 @@ func (n *Node) sendRequestVote(peer string, req *raftpb.RequestVoteRequest) (*ra
 }
 
 func (n *Node) sendAppendEntries(peer string, req *raftpb.AppendEntriesRequest) (*raftpb.AppendEntriesResponse, error) {
-	return nil, nil
+	p, found := n.peers[peer]
+	if !found {
+		return nil, fmt.Errorf("raft: peer %q not found", peer)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), n.cfg.RPCTimeout)
+	defer cancel()
+
+	resp, err := p.AppendEntries(ctx, req)
+	return resp, err
 }
