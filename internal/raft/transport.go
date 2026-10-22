@@ -27,7 +27,7 @@ func (t *grpcTransport) RequestVote(ctx context.Context, req *raftpb.RequestVote
 	if req.Term > currentTerm {
 		currentTerm = req.Term
 		votedFor = ""
-		t.node.state.SetTermAndVote(req.Term, votedFor)
+		t.node.becomeFollower(req.Term)
 	}
 
 	if votedFor != "" && votedFor != req.CandidateId {
@@ -52,6 +52,7 @@ func (t *grpcTransport) RequestVote(ctx context.Context, req *raftpb.RequestVote
 	t.node.role = Follower
 	t.node.mu.Unlock()
 
+	// TODO: emit n.resetElection #74
 	return &raftpb.RequestVoteResponse{
 		Term:        req.Term,
 		VoteGranted: true,
@@ -59,5 +60,23 @@ func (t *grpcTransport) RequestVote(ctx context.Context, req *raftpb.RequestVote
 }
 
 func (t *grpcTransport) AppendEntries(ctx context.Context, req *raftpb.AppendEntriesRequest) (*raftpb.AppendEntriesResponse, error) {
-	return &raftpb.AppendEntriesResponse{}, nil
+	if req.Term < t.node.CurrentTerm() {
+		return &raftpb.AppendEntriesResponse{Term: t.node.CurrentTerm(), Success: false}, nil
+	}
+
+	t.node.mu.Lock()
+	t.node.leaderID = req.LeaderId
+	t.node.mu.Unlock()
+
+	if req.Term > t.node.CurrentTerm() {
+		t.node.becomeFollower(req.Term)
+		return &raftpb.AppendEntriesResponse{Term: t.node.CurrentTerm(), Success: true}, nil
+	}
+
+	// TODO: emit n.resetElection #74
+
+	return &raftpb.AppendEntriesResponse{
+		Term:    t.node.CurrentTerm(),
+		Success: true,
+	}, nil
 }

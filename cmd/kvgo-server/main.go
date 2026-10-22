@@ -78,6 +78,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = raftNode.Start()
+	if err != nil {
+		slog.Error("failed to start raft node", "error", err)
+		os.Exit(1)
+	}
+	defer raftNode.Stop()
+
 	err = server.Start(cfg, s, raftNode)
 	if err != nil {
 		slog.Error("server stopped unexpectedly", "error", err)
