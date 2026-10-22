@@ -88,3 +88,30 @@ func TestRPC_RequestVote(t *testing.T) {
 		t.Errorf("Term = %d, want 1", resp.Term)
 	}
 }
+
+func TestRPC_AppendEntries(t *testing.T) {
+	node, addr := newStartedTestNode(t)
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+
+	client := raftpb.NewRaftServiceClient(conn)
+
+	req := raftpb.AppendEntriesRequest{
+		Term:     1,
+		LeaderId: "leader-id",
+	}
+	resp, err := client.AppendEntries(context.Background(), &req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !resp.Success {
+		t.Errorf("Success = false, want true")
+	}
+	if resp.Term != 1 {
+		t.Errorf("Term = %d, want 1", resp.Term)
+	}
+}
