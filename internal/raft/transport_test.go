@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func newStartedTestNode(t *testing.T) (*Node, string) {
+func newUnstartedTestNode(t *testing.T) (*Node, string) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,12 @@ func newStartedTestNode(t *testing.T) (*Node, string) {
 		t.Fatal(err)
 	}
 
-	err = node.Start()
+	return node, addr
+}
+
+func newStartedTestNode(t *testing.T) (*Node, string) {
+	node, addr := newUnstartedTestNode(t)
+	err := node.Start()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +95,7 @@ func TestRPC_RequestVote(t *testing.T) {
 }
 
 func TestRPC_AppendEntries(t *testing.T) {
-	node, addr := newStartedTestNode(t)
+	_, addr := newStartedTestNode(t)
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
@@ -113,5 +118,24 @@ func TestRPC_AppendEntries(t *testing.T) {
 	}
 	if resp.Term != 1 {
 		t.Errorf("Term = %d, want 1", resp.Term)
+	}
+}
+
+func TestRPC_UnreachablePeer(t *testing.T) {
+	node, _ := newUnstartedTestNode(t)
+	deadAddr := "127.0.0.1:1"
+	conn, err := grpc.NewClient(deadAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+
+	node.peers = map[string]raftpb.RaftServiceClient{
+		deadAddr: raftpb.NewRaftServiceClient(conn),
+	}
+
+	_, err = node.sendRequestVote(deadAddr, &raftpb.RequestVoteRequest{})
+	if err == nil {
+		t.Error("want error for unreachable peer, got nil")
 	}
 }
