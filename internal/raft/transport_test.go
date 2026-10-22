@@ -29,7 +29,7 @@ func newUnstartedTestNode(t *testing.T) (*Node, string) {
 	walCfg := config.WalConfig{
 		WalPath:             t.TempDir() + "/wal.log",
 		SnapshotPath:        t.TempDir() + "/snapshot.db",
-		CompactionThreshold: 100, // anything should work
+		CompactionThreshold: 100,
 	}
 
 	wal, err := wal.Open(&walCfg)
@@ -41,7 +41,7 @@ func newUnstartedTestNode(t *testing.T) (*Node, string) {
 		NodeID:             "node-" + strconv.Itoa(rand.Int()),
 		Host:               "127.0.0.1",
 		Port:               port,
-		RPCTimeout:         10 * time.Millisecond,
+		RPCTimeout:         100 * time.Millisecond,
 		ElectionTimeoutMin: 100 * time.Millisecond,
 		ElectionTimeoutMax: 200 * time.Millisecond,
 		HeartbeatInterval:  100 * time.Millisecond,
@@ -138,7 +138,13 @@ func TestRPC_AppendEntries(t *testing.T) {
 
 func TestRPC_UnreachablePeer(t *testing.T) {
 	node, _ := newUnstartedTestNode(t)
-	deadAddr := "127.0.0.1:1"
+	dl, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadAddr := dl.Addr().String()
+	dl.Close()
+
 	conn, err := grpc.NewClient(deadAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
