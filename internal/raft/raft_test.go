@@ -277,7 +277,11 @@ func TestHeartbeat_leaderSendsToPeers(t *testing.T) {
 
 	time.Sleep(n1.cfg.HeartbeatInterval * 3)
 
-	if n2.leaderID != n1.cfg.NodeID {
-		t.Fatalf("leaderID == %v, want %v", n2.leaderID, n1.cfg.NodeID)
+	n2.mu.RLock()
+	leaderID := n2.leaderID
+	n2.mu.RUnlock()
+
+	if leaderID != n1.cfg.NodeID {
+		t.Fatalf("leaderID == %v, want %v", leaderID, n1.cfg.NodeID)
 	}
 }
