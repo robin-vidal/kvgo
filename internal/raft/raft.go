@@ -175,7 +175,7 @@ func (n *Node) run() {
 	for {
 		select {
 		case <-timer.C:
-			n.becomeCandidate()
+			n.startElection()
 			timer.Reset(n.randomElectionTimeout())
 		case <-n.resetElection:
 			if !timer.Stop() {
@@ -203,4 +203,45 @@ func (n *Node) randomElectionTimeout() time.Duration {
 
 func (n *Node) newElectionTimer() *time.Timer {
 	return time.NewTimer(n.randomElectionTimeout())
+}
+
+func (n *Node) startElection() {
+	n.becomeCandidate()
+
+	votes := make(chan bool, len(n.peers))
+	req := &raftpb.RequestVoteRequest{
+		Term:         n.CurrentTerm(),
+		CandidateId:  n.cfg.NodeID,
+		LastLogIndex: n.wal.CurrentSeqNum(),
+		LastLogTerm:  n.wal.GetTerm(),
+	}
+
+	for peer := range n.peers {
+		go func(p string) {
+			resp, err := n.sendRequestVote(p, req)
+			if err == nil {
+				votes <- resp.VoteGranted
+			}
+		}(peer)
+	}
+
+	granted := 1 // vote self
+	ctx, cancel := context.WithTimeout(context.Background(), n.cfg.ElectionTimeoutMax)
+	defer cancel()
+
+	for i := 0; i < len(n.peers); i++ {
+		select {
+		case v := <-votes:
+			if v {
+				granted++
+			}
+		case <-ctx.Done():
+			return
+		}
+
+		if granted > (len(n.peers)+1)/2 {
+			n.becomeLeader()
+			return
+		}
+	}
 }
