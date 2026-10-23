@@ -52,7 +52,6 @@ func (t *grpcTransport) RequestVote(ctx context.Context, req *raftpb.RequestVote
 	t.node.role = Follower
 	t.node.mu.Unlock()
 
-	// TODO: emit n.resetElection #74
 	return &raftpb.RequestVoteResponse{
 		Term:        req.Term,
 		VoteGranted: true,
@@ -68,12 +67,15 @@ func (t *grpcTransport) AppendEntries(ctx context.Context, req *raftpb.AppendEnt
 	t.node.leaderID = req.LeaderId
 	t.node.mu.Unlock()
 
+	select {
+	case t.node.resetElection <- struct{}{}:
+	default:
+	}
+
 	if req.Term > t.node.CurrentTerm() {
 		t.node.becomeFollower(req.Term)
 		return &raftpb.AppendEntriesResponse{Term: t.node.CurrentTerm(), Success: true}, nil
 	}
-
-	// TODO: emit n.resetElection #74
 
 	return &raftpb.AppendEntriesResponse{
 		Term:    t.node.CurrentTerm(),

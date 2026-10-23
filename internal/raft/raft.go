@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/raft/raftpb"
@@ -65,7 +67,13 @@ func (n *Node) Start() error {
 	raftpb.RegisterRaftServiceServer(n.grpcServer, &grpcTransport{node: n})
 	go n.grpcServer.Serve(ln)
 
-	return n.dialPeers()
+	if err := n.dialPeers(); err != nil {
+		return err
+	}
+
+	go n.run()
+
+	return nil
 }
 
 func (n *Node) Stop() {
@@ -157,4 +165,42 @@ func (n *Node) sendAppendEntries(peer string, req *raftpb.AppendEntriesRequest) 
 
 	resp, err := p.AppendEntries(ctx, req)
 	return resp, err
+}
+
+func (n *Node) run() {
+	timer := n.newElectionTimer()
+	heartbeat := time.NewTicker(n.cfg.HeartbeatInterval)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			n.becomeCandidate()
+			timer.Reset(n.randomElectionTimeout())
+		case <-n.resetElection:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(n.randomElectionTimeout())
+		case <-heartbeat.C:
+			if n.State() == Leader {
+				for peer := range n.peers {
+					go n.sendAppendEntries(peer, &raftpb.AppendEntriesRequest{
+						Term:     n.CurrentTerm(),
+						LeaderId: n.cfg.NodeID,
+					})
+				}
+			}
+		}
+	}
+}
+
+func (n *Node) randomElectionTimeout() time.Duration {
+	min := n.cfg.ElectionTimeoutMin
+	max := n.cfg.ElectionTimeoutMax
+	return min + time.Duration(rand.Int63n(int64(max-min)))
+}
+
+func (n *Node) newElectionTimer() *time.Timer {
+	return time.NewTimer(n.randomElectionTimeout())
 }
