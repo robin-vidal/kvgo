@@ -1,12 +1,16 @@
 package raft
 
 import (
+	"context"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
+	"github.com/robin-vidal/kvgo/internal/raft/raftpb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestNewNode(t *testing.T) {
@@ -220,5 +224,40 @@ func TestElectionTimeout_ExpiresBecomesCandidate(t *testing.T) {
 
 	if n.State() != Candidate {
 		t.Fatalf("State() == %v, want Candidate", n.State())
+	}
+}
+
+func TestElectionTimeout_ResetOnHeartbeat(t *testing.T) {
+	n, addr := newStartedTestNode(t)
+	time.Sleep(n.cfg.ElectionTimeoutMin - 50*time.Millisecond)
+
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+
+	client := raftpb.NewRaftServiceClient(conn)
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(50 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				client.AppendEntries(context.Background(), &raftpb.AppendEntriesRequest{
+					Term: 1, LeaderId: "leader-1",
+				})
+			case <-stop:
+				return
+			}
+		}
+	}()
+
+	time.Sleep(500 * time.Millisecond)
+	close(stop)
+
+	if n.State() != Follower {
+		t.Fatalf("State() == %v, want Follower", n.State())
 	}
 }
