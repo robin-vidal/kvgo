@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 )
@@ -211,4 +212,13 @@ func TestCurrentTermConcurrent(t *testing.T) {
 		node.becomeCandidate()
 	}()
 	wg.Wait()
+}
+
+func TestElectionTimeout_ExpiresBecomesCandidate(t *testing.T) {
+	n, _ := newStartedTestNode(t)
+	time.Sleep(n.cfg.ElectionTimeoutMax + 50*time.Millisecond)
+
+	if n.State() != Candidate {
+		t.Fatalf("State() == %v, want Candidate", n.State())
+	}
 }
