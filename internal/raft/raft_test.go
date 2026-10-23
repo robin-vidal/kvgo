@@ -261,3 +261,23 @@ func TestElectionTimeout_ResetOnHeartbeat(t *testing.T) {
 		t.Fatalf("State() == %v, want Follower", n.State())
 	}
 }
+
+func TestHeartbeat_leaderSendsToPeers(t *testing.T) {
+	n1, _ := newStartedTestNode(t)
+	n2, addr2 := newStartedTestNode(t)
+
+	conn, err := grpc.NewClient(addr2, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+
+	n1.peers[addr2] = raftpb.NewRaftServiceClient(conn)
+	n1.becomeLeader()
+
+	time.Sleep(n1.cfg.HeartbeatInterval * 3)
+
+	if n2.leaderID != n1.cfg.NodeID {
+		t.Fatalf("leaderID == %v, want %v", n2.leaderID, n1.cfg.NodeID)
+	}
+}
