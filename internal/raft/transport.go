@@ -73,7 +73,10 @@ func (t *grpcTransport) AppendEntries(ctx context.Context, req *raftpb.AppendEnt
 		return &raftpb.AppendEntriesResponse{Term: t.node.CurrentTerm(), Success: true}, nil
 	}
 
-	// TODO: emit n.resetElection #74
+	select {
+	case t.node.resetElection <- struct{}{}:
+	default:
+	}
 
 	return &raftpb.AppendEntriesResponse{
 		Term:    t.node.CurrentTerm(),
