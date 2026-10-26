@@ -2,11 +2,11 @@ package raft
 
 import (
 	"context"
+	"net"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
-	"net"
 
 	"github.com/robin-vidal/kvgo/internal/config"
 	"github.com/robin-vidal/kvgo/internal/raft/raftpb"
@@ -288,43 +288,70 @@ func TestHeartbeat_leaderSendsToPeers(t *testing.T) {
 }
 
 type voteGrantedService struct {
-    raftpb.UnimplementedRaftServiceServer
+	raftpb.UnimplementedRaftServiceServer
 }
 
 func (s *voteGrantedService) RequestVote(_ context.Context, _ *raftpb.RequestVoteRequest) (*raftpb.RequestVoteResponse, error) {
-    return &raftpb.RequestVoteResponse{VoteGranted: true, Term: 1}, nil
+	return &raftpb.RequestVoteResponse{VoteGranted: true, Term: 1}, nil
 }
 
 func startFakeVoter(t *testing.T, v raftpb.RaftServiceServer) string {
-    ln, err := net.Listen("tcp", "127.0.0.1:0")
-    if err != nil {
-        t.Fatal(err)
-    }
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-    srv := grpc.NewServer()
+	srv := grpc.NewServer()
 
-    raftpb.RegisterRaftServiceServer(srv, v)
-    go srv.Serve(ln)
-    t.Cleanup(srv.GracefulStop)
+	raftpb.RegisterRaftServiceServer(srv, v)
+	go srv.Serve(ln)
+	t.Cleanup(srv.GracefulStop)
 
-    return ln.Addr().String()
+	return ln.Addr().String()
 }
 
 func TestElection_MajorityBecomesLeader(t *testing.T) {
 	peer1Addr := startFakeVoter(t, &voteGrantedService{})
 	peer2Addr := startFakeVoter(t, &voteGrantedService{})
 
- 	n, _ := newUnstartedTestNode(t)
-  n.cfg.Peers = []string{peer1Addr, peer2Addr}
+	n, _ := newUnstartedTestNode(t)
+	n.cfg.Peers = []string{peer1Addr, peer2Addr}
 
 	if err := n.Start(); err != nil {
-        t.Fatal(err)
-    }
-  t.Cleanup(func() { n.Stop() })
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { n.Stop() })
 
 	time.Sleep(n.cfg.ElectionTimeoutMax + 50*time.Millisecond)
 
 	if n.State() != Leader {
-    t.Fatalf("State() == %v, want Leader", n.State())
+		t.Fatalf("State() == %v, want Leader", n.State())
+	}
+}
+
+type voteDeniedService struct {
+	raftpb.UnimplementedRaftServiceServer
+}
+
+func (s *voteDeniedService) RequestVote(_ context.Context, _ *raftpb.RequestVoteRequest) (*raftpb.RequestVoteResponse, error) {
+	return &raftpb.RequestVoteResponse{VoteGranted: false, Term: 1}, nil
+}
+
+func TestElection_NoMajorityStaysCandidate(t *testing.T) {
+	peer1Addr := startFakeVoter(t, &voteDeniedService{})
+	peer2Addr := startFakeVoter(t, &voteDeniedService{})
+
+	n, _ := newUnstartedTestNode(t)
+	n.cfg.Peers = []string{peer1Addr, peer2Addr}
+
+	if err := n.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { n.Stop() })
+
+	time.Sleep(n.cfg.ElectionTimeoutMax + 50*time.Millisecond)
+
+	if n.State() != Candidate {
+		t.Fatalf("State() == %v, want Candidate", n.State())
 	}
 }
