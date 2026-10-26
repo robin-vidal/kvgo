@@ -355,3 +355,36 @@ func TestElection_NoMajorityStaysCandidate(t *testing.T) {
 		t.Fatalf("State() == %v, want Candidate", n.State())
 	}
 }
+
+func TestElection_AppendEntriesStopsElection(t *testing.T) {
+	peer1Addr := startFakeVoter(t, &slowRaftService{})
+	peer2Addr := startFakeVoter(t, &slowRaftService{})
+
+	n, addr := newUnstartedTestNode(t)
+	n.cfg.Peers = []string{peer1Addr, peer2Addr}
+
+	if err := n.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { n.Stop() })
+
+	time.Sleep(n.cfg.ElectionTimeoutMax + 50*time.Millisecond)
+
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+
+	client := raftpb.NewRaftServiceClient(conn)
+	client.AppendEntries(context.Background(), &raftpb.AppendEntriesRequest{
+		Term:     n.CurrentTerm(),
+		LeaderId: "leader-id",
+	})
+
+	time.Sleep(50 * time.Millisecond)
+
+	if n.State() != Follower {
+		t.Fatalf("State() == %v, want Follower", n.State())
+	}
+}
