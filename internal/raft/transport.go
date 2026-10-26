@@ -72,9 +72,8 @@ func (t *grpcTransport) AppendEntries(ctx context.Context, req *raftpb.AppendEnt
 	default:
 	}
 
-	if req.Term > t.node.CurrentTerm() {
+	if req.Term > t.node.CurrentTerm() || t.node.State() == Candidate {
 		t.node.becomeFollower(req.Term)
-		return &raftpb.AppendEntriesResponse{Term: t.node.CurrentTerm(), Success: true}, nil
 	}
 
 	return &raftpb.AppendEntriesResponse{
